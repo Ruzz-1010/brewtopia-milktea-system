@@ -1,13 +1,13 @@
-    import React from 'react'
-    import ReactDOM from 'react-dom/client'
-    import App from './App.jsx'
-    import { setupAxiosInterceptor } from './utils/auth'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
 
-    // Setup axios interceptor for auth tokens
-    setupAxiosInterceptor();
+// TODO: Uncomment when auth is ready
+// import { setupAxiosInterceptor } from './utils/auth'
+// setupAxiosInterceptor();
 
-    ReactDOM.createRoot(document.getElementById('root')).render(
-    <React.StrictMode>
-        <App />
-    </React.StrictMode>,
-    )
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)

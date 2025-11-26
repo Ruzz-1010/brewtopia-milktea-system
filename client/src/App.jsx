@@ -5,7 +5,6 @@ import './App.css';
 
 function App() {
   const [currentView, setCurrentView] = useState('customer');
-  const [user, setUser] = useState(null);
 
   return (
     <div className="App">

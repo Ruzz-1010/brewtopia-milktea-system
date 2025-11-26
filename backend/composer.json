@@ -1,0 +1,13 @@
+{
+    "name": "brewtopia/milktea-system",
+    "type": "project",
+    "require": {
+        "mongodb/mongodb": "^1.15",
+        "ext-mongodb": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Brewtopia\\": "./"
+        }
+    }
+}

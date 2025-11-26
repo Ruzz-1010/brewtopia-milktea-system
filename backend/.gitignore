@@ -1,0 +1,9 @@
+vendor/
+.env
+*.log
+test_connection.php
+debug_test.php
+check_php.php
+simple_test.php
+simple_connect.php
+seed_data.php

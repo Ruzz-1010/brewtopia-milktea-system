@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import CustomizationModal from './CustomizationModal';
+import AuthModal from './AuthModal';
 import './Dashboard.css';
 
 const API_URL = 'https://brewtopia-backend.onrender.com';
@@ -8,31 +10,28 @@ function Dashboard() {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Load products
-    axios.get(`${API_URL}/api/products`)
-      .then(response => {
-        setProducts(response.data);
-      })
-      .catch(error => {
-        console.error('Error loading products:', error);
-      });
+    loadProducts();
   }, []);
 
-  const addToCart = (product) => {
-    const cartItem = {
-      ...product,
-      quantity: 1,
-      customizations: {
-        size: 'Regular',
-        sugar: '50%',
-        ice: 'Regular',
-        addons: []
-      }
-    };
+  const loadProducts = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/products`);
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
+  };
+
+  const handleAddToCart = (product) => {
+    setSelectedProduct(product);
+  };
+
+  const handleCustomizedAddToCart = (cartItem) => {
     setCart([...cart, cartItem]);
-    alert(`${product.name} added to cart!`);
   };
 
   const removeFromCart = (index) => {
@@ -41,7 +40,20 @@ function Dashboard() {
   };
 
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (item.finalPrice || item.price), 0);
+  };
+
+  const handleCheckout = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    alert(`Order placed! Total: ₱${getTotalPrice()}`);
+    setCart([]);
+  };
+
+  const handleLogin = (userData) => {
+    setUser(userData);
   };
 
   return (
@@ -49,8 +61,20 @@ function Dashboard() {
       {/* Header */}
       <header className="header">
         <h1>🧋 Brewtopia Milk Tea</h1>
-        <div className="cart-summary">
-          🛒 Cart: {cart.length} items - ₱{getTotalPrice()}
+        <div className="header-actions">
+          {user ? (
+            <span>Welcome, {user.name}! 👋</span>
+          ) : (
+            <button 
+              className="login-btn"
+              onClick={() => setShowAuthModal(true)}
+            >
+              Login/Register
+            </button>
+          )}
+          <div className="cart-summary">
+            🛒 {cart.length} items - ₱{getTotalPrice()}
+          </div>
         </div>
       </header>
 
@@ -62,7 +86,7 @@ function Dashboard() {
             {products.map(product => (
               <div key={product.id} className="product-card">
                 <div className="product-image">
-                  <span>🍵</span>
+                  <span>{product.image}</span>
                 </div>
                 <div className="product-info">
                   <h3>{product.name}</h3>
@@ -70,9 +94,9 @@ function Dashboard() {
                   <div className="product-price">₱{product.price}</div>
                   <button 
                     className="add-to-cart-btn"
-                    onClick={() => addToCart(product)}
+                    onClick={() => handleAddToCart(product)}
                   >
-                    Add to Cart
+                    Customize & Add to Cart
                   </button>
                 </div>
               </div>
@@ -94,9 +118,12 @@ function Dashboard() {
                     <div>Size: {item.customizations.size}</div>
                     <div>Sugar: {item.customizations.sugar}</div>
                     <div>Ice: {item.customizations.ice}</div>
+                    {item.customizations.addons.length > 0 && (
+                      <div>Add-ons: {item.customizations.addons.join(', ')}</div>
+                    )}
                   </div>
                   <div className="item-actions">
-                    <span>₱{item.price}</span>
+                    <span>₱{item.finalPrice || item.price}</span>
                     <button 
                       className="remove-btn"
                       onClick={() => removeFromCart(index)}
@@ -109,13 +136,29 @@ function Dashboard() {
               <div className="cart-total">
                 <strong>Total: ₱{getTotalPrice()}</strong>
               </div>
-              <button className="checkout-btn">
-                Proceed to Checkout
+              <button className="checkout-btn" onClick={handleCheckout}>
+                {user ? 'Place Order' : 'Login to Checkout'}
               </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      {selectedProduct && (
+        <CustomizationModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={handleCustomizedAddToCart}
+        />
+      )}
+
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onLogin={handleLogin}
+        />
+      )}
     </div>
   );
 }

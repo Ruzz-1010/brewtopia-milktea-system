@@ -134,3 +134,22 @@
   .checkout-btn:hover {
     background: #32CD32;
   }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .login-btn {
+    background: white;
+    color: #8B4513;
+    border: 2px solid white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  .login-btn:hover {
+    background: #f0f0f0;
+  }

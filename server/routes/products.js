@@ -1,52 +1,59 @@
 const express = require('express');
 const router = express.Router();
+const Product = require('../models/Product');
 
-// Sample milk tea products
-const products = [
+// Sample products with customization options
+const sampleProducts = [
   {
-    id: 1,
     name: "Classic Milk Tea",
     price: 120,
-    image: "/images/classic-milk-tea.jpg",
+    image: "🧋",
     description: "Original milk tea with creamy taste",
-    category: "Milk Tea"
+    category: "Milk Tea",
+    customizations: {
+      sizes: [
+        { name: "Regular", price: 0 },
+        { name: "Large", price: 20 },
+        { name: "X-Large", price: 30 }
+      ],
+      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+      addons: [
+        { name: "Pearls", price: 15 },
+        { name: "Pudding", price: 20 },
+        { name: "Whip Cream", price: 25 }
+      ]
+    }
   },
   {
-    id: 2, 
     name: "Wintermelon Milk Tea",
     price: 130,
-    image: "/images/wintermelon-milk-tea.jpg",
+    image: "🍈",
     description: "Sweet wintermelon with fresh milk",
-    category: "Milk Tea"
-  },
-  {
-    id: 3,
-    name: "Taro Milk Tea", 
-    price: 140,
-    image: "/images/taro-milk-tea.jpg",
-    description: "Creamy taro flavor with pearls",
-    category: "Milk Tea"
-  },
-  {
-    id: 4,
-    name: "Matcha Milk Tea",
-    price: 150, 
-    image: "/images/matcha-milk-tea.jpg",
-    description: "Premium matcha with milk",
-    category: "Milk Tea"
+    category: "Milk Tea",
+    customizations: {
+      sizes: [
+        { name: "Regular", price: 0 },
+        { name: "Large", price: 20 },
+        { name: "X-Large", price: 30 }
+      ],
+      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+      addons: [
+        { name: "Pearls", price: 15 },
+        { name: "Pudding", price: 20 },
+        { name: "Whip Cream", price: 25 }
+      ]
+    }
   }
 ];
 
 // Get all products
-router.get('/', (req, res) => {
-  res.json(products);
+router.get('/', async (req, res) => {
+  try {
+    // For now, return sample products
+    res.json(sampleProducts);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
-
-// Get product by ID
-router.get('/:id', (req, res) => {
-  const product = products.find(p => p.id === parseInt(req.params.id));
-  if (!product) return res.status(404).json({ message: 'Product not found' });
-  res.json(product);
-});
-
-module.exports = router;

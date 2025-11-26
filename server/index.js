@@ -7,6 +7,9 @@ const PORT = process.env.PORT || 5000;
 // Add this after your existing routes
 const productRoutes = require('./routes/products');
 app.use('/api/products', productRoutes);
+// Add these after existing routes
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
 // FIX CORS - Allow all origins
 app.use(cors({
   origin: '*',

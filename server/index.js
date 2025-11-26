@@ -4,11 +4,15 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+const adminRoutes = require('./routes/admin');
+const orderRoutes = require('./routes/orders');
 // ✅ SIMPLE CORS FIX
 app.use(cors());
 
 app.use(express.json());
+
+app.use('/api/admin', adminRoutes);
+app.use('/api/orders', orderRoutes);
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://brewtopia_admin:BrewtopiaMilkTea@brewtopia.mznffmc.mongodb.net/brewtopia?retryWrites=true&w=majority';
 

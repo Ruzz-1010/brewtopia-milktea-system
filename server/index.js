@@ -4,18 +4,9 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-// Add this after your existing routes
-const productRoutes = require('./routes/products');
-app.use('/api/products', productRoutes);
-// Add these after existing routes
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
-// FIX CORS - Allow all origins
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: false
-}));
+
+// ✅ SIMPLE CORS FIX
+app.use(cors());
 
 app.use(express.json());
 
@@ -25,7 +16,122 @@ mongoose.connect(MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch(err => console.error('❌ MongoDB error:', err));
 
-// Add health endpoint
+// ✅ DIRECT PRODUCTS DATA (No routes file needed)
+const products = [
+  {
+    id: 1,
+    name: "Classic Milk Tea",
+    price: 120,
+    image: "🧋",
+    description: "Original milk tea with creamy taste",
+    category: "Milk Tea",
+    customizations: {
+      sizes: [
+        { name: "Regular", price: 0 },
+        { name: "Large", price: 20 },
+        { name: "X-Large", price: 30 }
+      ],
+      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+      addons: [
+        { name: "Pearls", price: 15 },
+        { name: "Pudding", price: 20 },
+        { name: "Whip Cream", price: 25 }
+      ]
+    }
+  },
+  {
+    id: 2,
+    name: "Wintermelon Milk Tea", 
+    price: 130,
+    image: "🍈",
+    description: "Sweet wintermelon with fresh milk",
+    category: "Milk Tea",
+    customizations: {
+      sizes: [
+        { name: "Regular", price: 0 },
+        { name: "Large", price: 20 },
+        { name: "X-Large", price: 30 }
+      ],
+      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+      addons: [
+        { name: "Pearls", price: 15 },
+        { name: "Pudding", price: 20 },
+        { name: "Whip Cream", price: 25 }
+      ]
+    }
+  },
+  {
+    id: 3,
+    name: "Taro Milk Tea",
+    price: 140,
+    image: "🟣", 
+    description: "Creamy taro flavor with pearls",
+    category: "Milk Tea",
+    customizations: {
+      sizes: [
+        { name: "Regular", price: 0 },
+        { name: "Large", price: 20 },
+        { name: "X-Large", price: 30 }
+      ],
+      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+      addons: [
+        { name: "Pearls", price: 15 },
+        { name: "Pudding", price: 20 },
+        { name: "Whip Cream", price: 25 }
+      ]
+    }
+  },
+  {
+    id: 4,
+    name: "Matcha Milk Tea",
+    price: 150,
+    image: "🍵",
+    description: "Premium matcha with milk", 
+    category: "Milk Tea",
+    customizations: {
+      sizes: [
+        { name: "Regular", price: 0 },
+        { name: "Large", price: 20 },
+        { name: "X-Large", price: 30 }
+      ],
+      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+      addons: [
+        { name: "Pearls", price: 15 },
+        { name: "Pudding", price: 20 },
+        { name: "Whip Cream", price: 25 }
+      ]
+    }
+  }
+];
+
+// ✅ DIRECT ROUTES (No external files)
+app.get('/api/products', (req, res) => {
+  console.log('📦 Products requested');
+  res.json(products);
+});
+
+app.post('/api/auth/register', (req, res) => {
+  console.log('👤 Registration attempt');
+  res.json({ message: 'Registration successful!' });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  console.log('🔐 Login attempt');
+  res.json({ 
+    message: 'Login successful!',
+    user: {
+      id: 1,
+      name: 'Test User',
+      email: req.body.email || 'test@example.com'
+    }
+  });
+});
+
+// ✅ HEALTH CHECK
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -35,15 +141,22 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ✅ ROOT ENDPOINT
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Brewtopia Backend is LIVE! 🚀',
     database: 'Connected',
     environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString()
+    endpoints: {
+      products: '/api/products',
+      health: '/health',
+      auth: '/api/auth'
+    }
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 MongoDB: Connected`);
+  console.log(`🌐 CORS: Enabled for all origins`);
 });

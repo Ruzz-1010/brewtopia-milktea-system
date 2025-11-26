@@ -4,23 +4,58 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const adminRoutes = require('./routes/admin');
-const orderRoutes = require('./routes/orders');
+
 // ✅ SIMPLE CORS FIX
 app.use(cors());
-
 app.use(express.json());
-
-app.use('/api/admin', adminRoutes);
-app.use('/api/orders', orderRoutes);
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://brewtopia_admin:BrewtopiaMilkTea@brewtopia.mznffmc.mongodb.net/brewtopia?retryWrites=true&w=majority';
 
+// ✅ AUTO-CREATE ADMIN FUNCTION
+const createDefaultAdmin = async () => {
+  try {
+    const User = require('./models/User');
+    const adminExists = await User.findOne({ role: 'admin' });
+    
+    if (!adminExists) {
+      const admin = new User({
+        name: 'Brewtopia Admin',
+        email: 'admin@brewtopia.com',
+        password: 'admin123',
+        role: 'admin'
+      });
+      await admin.save();
+      console.log('✅ Default admin account created');
+      console.log('📧 Email: admin@brewtopia.com');
+      console.log('🔑 Password: admin123');
+      console.log('⚠️  Change password after first login!');
+    } else {
+      console.log('✅ Admin account already exists');
+    }
+  } catch (error) {
+    console.log('ℹ️  Admin setup note:', error.message);
+  }
+};
+
+// ✅ MONGODB CONNECTION WITH ADMIN CREATION
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+    createDefaultAdmin(); // 👈 CREATE ADMIN AFTER CONNECTION
+  })
   .catch(err => console.error('❌ MongoDB error:', err));
 
-// ✅ DIRECT PRODUCTS DATA (No routes file needed)
+// ✅ IMPORT ROUTES
+const adminRoutes = require('./routes/admin');
+const orderRoutes = require('./routes/orders');
+const authRoutes = require('./routes/auth');
+
+// ✅ USE ROUTES
+app.use('/api/admin', adminRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/auth', authRoutes);
+
+// ✅ DIRECT PRODUCTS DATA
 const products = [
   {
     id: 1,
@@ -112,27 +147,10 @@ const products = [
   }
 ];
 
-// ✅ DIRECT ROUTES (No external files)
+// ✅ DIRECT ROUTES
 app.get('/api/products', (req, res) => {
   console.log('📦 Products requested');
   res.json(products);
-});
-
-app.post('/api/auth/register', (req, res) => {
-  console.log('👤 Registration attempt');
-  res.json({ message: 'Registration successful!' });
-});
-
-app.post('/api/auth/login', (req, res) => {
-  console.log('🔐 Login attempt');
-  res.json({ 
-    message: 'Login successful!',
-    user: {
-      id: 1,
-      name: 'Test User',
-      email: req.body.email || 'test@example.com'
-    }
-  });
 });
 
 // ✅ HEALTH CHECK
@@ -154,7 +172,9 @@ app.get('/', (req, res) => {
     endpoints: {
       products: '/api/products',
       health: '/health',
-      auth: '/api/auth'
+      auth: '/api/auth',
+      admin: '/api/admin',
+      orders: '/api/orders'
     }
   });
 });

@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
-const Product = require('../models/Product');
+const { adminAuth } = require('../middleware/auth'); // ✅ ADD THIS
 
-// Get dashboard stats
-router.get('/dashboard', async (req, res) => {
+// 🔒 GET DASHBOARD STATS (ADMIN ONLY)
+router.get('/dashboard', adminAuth, async (req, res) => {
   try {
     const totalOrders = await Order.countDocuments();
     const pendingOrders = await Order.countDocuments({ status: 'pending' });
@@ -30,8 +30,8 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// Get all orders with filtering
-router.get('/orders', async (req, res) => {
+// 🔒 GET ALL ORDERS (ADMIN ONLY)
+router.get('/orders', adminAuth, async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     const query = status ? { status } : {};
@@ -54,8 +54,8 @@ router.get('/orders', async (req, res) => {
   }
 });
 
-// Update order status
-router.put('/orders/:id/status', async (req, res) => {
+// 🔒 UPDATE ORDER STATUS (ADMIN ONLY)
+router.put('/orders/:id/status', adminAuth, async (req, res) => {
   try {
     const { status } = req.body;
     const order = await Order.findByIdAndUpdate(
@@ -74,8 +74,8 @@ router.put('/orders/:id/status', async (req, res) => {
   }
 });
 
-// Get order analytics
-router.get('/analytics', async (req, res) => {
+// 🔒 GET ORDER ANALYTICS (ADMIN ONLY)
+router.get('/analytics', adminAuth, async (req, res) => {
   try {
     const today = new Date();
     const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);

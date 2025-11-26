@@ -4,7 +4,9 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+// Add this after your existing routes
+const productRoutes = require('./routes/products');
+app.use('/api/products', productRoutes);
 // FIX CORS - Allow all origins
 app.use(cors({
   origin: '*',

@@ -9,7 +9,7 @@ import PaymentModal   from './PaymentModal';
 const API_URL = 'https://brewtopia-backend.onrender.com';
 
 export default function Dashboard() {
-  /* --------------------  STATE  -------------------- */
+  /* ---------- state ---------- */
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -25,7 +25,7 @@ export default function Dashboard() {
 
   const categories = ['All','Milk Tea','Fruit Tea','Coffee','Specialty','Seasonal'];
 
-  /* --------------------  HOOKS  -------------------- */
+  /* ---------- hooks ---------- */
   useEffect(() => {
     loadProducts();
     const saved = localStorage.getItem('brewtopia_user');
@@ -34,13 +34,12 @@ export default function Dashboard() {
       setUser(u);
       if (u.role === 'admin') setCurrentView('admin');
     }
-
-    const onScroll = () => setIsScrolled(window.scrollY > 20);
+    const onScroll = () => setIsScrolled(window.scrollY > 30);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  /* --------------------  DATA  -------------------- */
+  /* ---------- data ---------- */
   const loadProducts = async () => {
     try {
       setLoading(true);
@@ -66,15 +65,15 @@ export default function Dashboard() {
              p.description.toLowerCase().includes(searchQuery.toLowerCase()))
         );
 
-  /* --------------------  CART LOGIC  -------------------- */
-  const addToCart = (product) => setSelectedProduct(product);
+  /* ---------- cart ---------- */
+  const addToCart = (p) => setSelectedProduct(p);
 
   const customizedAdd = (item) => {
     setCartLoading(true);
     setTimeout(() => {
       setCart((c) => [...c, item]);
       setCartLoading(false);
-    }, 500);
+    }, 600);
   };
 
   const remove = (idx) => {
@@ -99,7 +98,7 @@ export default function Dashboard() {
     }, 2000);
   };
 
-  /* --------------------  AUTH  -------------------- */
+  /* ---------- auth ---------- */
   const login = (u) => {
     setUser(u);
     localStorage.setItem('brewtopia_user', JSON.stringify(u));
@@ -112,125 +111,140 @@ export default function Dashboard() {
     localStorage.removeItem('brewtopia_user');
     localStorage.removeItem('brewtopia_token');
   };
-  const toAdmin   = () => user?.role === 'admin' && setCurrentView('admin');
-  const toShop    = () => setCurrentView('customer');
+  const toAdmin = () => user?.role === 'admin' && setCurrentView('admin');
+  const toShop  = () => setCurrentView('customer');
 
-  /* --------------------  ADMIN VIEW  -------------------- */
+  /* ---------- admin ---------- */
   if (currentView === 'admin' && user?.role === 'admin')
     return (
-      <div className="admin-layout">
-        <header className="admin-bar">
-          <button onClick={toShop} className="btn secondary">← Back to Shop</button>
+      <div className="adminWrap">
+        <header className="adminBar">
+          <button onClick={toShop} className="btnSecondary">← Back to Shop</button>
           <span>Welcome, Admin {user.name}</span>
-          <button onClick={logout} className="btn danger">Logout</button>
+          <button onClick={logout} className="btnDanger">Logout</button>
         </header>
         <AdminDashboard />
+        <style>{`
+          .adminWrap{background:#fff8fb;min-height:100vh}
+          .adminBar{display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+          .btnSecondary,.btnDanger{border:none;padding:.6rem 1rem;border-radius:12px;font-weight:600;cursor:pointer}
+          .btnSecondary{background:#ffe0f0;color:#d63384}
+          .btnDanger{background:#d63384;color:#fff}
+        `}</style>
       </div>
     );
 
-  /* --------------------  LOADER  -------------------- */
+  /* ---------- loader ---------- */
   const Spinner = () => (
     <div className="spinner">
       <div /><div /><div />
     </div>
   );
 
-  /* --------------------  JSX  -------------------- */
+  /* ---------- render ---------- */
   return (
     <>
       <style>{`
         :root{
-          --primary:#d63384;
+          --pink:#d63384;
+          --light:#ffe8f1;
           --bg:#fff8fb;
           --card:#ffffff;
           --text:#333;
-          --muted:#888;
-          --radius:16px;
-          --shadow:0 4px 18px rgba(0,0,0,.06);
+          --muted:#777;
+          --radius:20px;
+          --shadow:0 6px 24px rgba(0,0,0,.06);
+          font-size:18px;
         }
-        *{box-sizing:border-box;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
-        body{background:var(--bg);color:var(--text);}
-        .top-bar{
+        *{box-sizing:border-box;margin:0;font-family:'Quicksand',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}
+        body{background:var(--bg);color:var(--text)}
+        .topBar{
           position:sticky;top:0;left:0;right:0;
-          background:#fff;border-bottom:1px solid #eee;
+          background:#fff;border-bottom:2px solid var(--light);
           display:flex;align-items:center;justify-content:space-between;
-          padding:.75rem 1.25rem;z-index:10;
+          padding:1rem 2rem;z-index:10;
         }
-        .top-bar.scrolled{box-shadow:var(--shadow);}
-        .logo{font-size:1.5rem;font-weight:700;display:flex;align-items:center;gap:.5rem;}
+        .topBar.scrolled{box-shadow:var(--shadow)}
+        .logo{font-size:2.2rem;font-weight:800;display:flex;align-items:center;gap:.5rem;letter-spacing:-1px;color:var(--pink)}
+        .logo span{font-size:2.8rem}
         .search input{
-          border:1px solid #ddd;border-radius:var(--radius);padding:.5rem .75rem;width:220px;
+          border:2px solid var(--light);border-radius:var(--radius);padding:.7rem 1.2rem;
+          width:280px;font-size:1.1rem;
         }
-        .top-actions{display:flex;align-items:center;gap:.75rem;}
-        .cart-tag{
-          background:var(--primary);color:#fff;
-          padding:.35rem .75rem;border-radius:var(--radius);
-          font-weight:600;cursor:pointer;
+        .topActions{display:flex;align-items:center;gap:1rem}
+        .cartTag{
+          background:var(--pink);color:#fff;
+          padding:.6rem 1.2rem;border-radius:var(--radius);
+          font-weight:700;font-size:1.1rem;cursor:pointer;
         }
-        .wrapper{display:flex;gap:1.5rem;padding:1.5rem;max-width:1300px;margin:auto;}
-        aside{width:380px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.25rem;height:fit-content;position:sticky;top:90px;}
-        main{flex:1;}
-        .pills{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;}
+        .wrapper{display:flex;gap:2rem;padding:2rem;max-width:1400px;margin:auto}
+        aside{width:420px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.8rem;height:fit-content;position:sticky;top:110px}
+        main{flex:1}
+        .pills{display:flex;gap:.8rem;margin-bottom:1.8rem;flex-wrap:wrap}
         .pill{
-          border:1px solid #ddd;background:#fff;padding:.4rem .9rem;border-radius:999px;font-size:.85rem;cursor:pointer;
+          border:2px solid var(--light);background:#fff;padding:.6rem 1.3rem;border-radius:999px;
+          font-size:1.1rem;font-weight:600;cursor:pointer;transition:.2s;
         }
-        .pill.active{background:var(--primary);color:#fff;border-color:var(--primary);}
-        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;}
+        .pill.active{background:var(--pink);color:#fff;border-color:var(--pink)}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.8rem}
         .product{
           background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
-          overflow:hidden;display:flex;flex-direction:column;
+          overflow:hidden;display:flex;flex-direction:column;transition:.25s;
         }
-        .product img{width:100%;height:140px;object-fit:cover;}
-        .product-body{padding:.75rem 1rem 1rem;flex:1;display:flex;flex-direction:column;}
-        .product-body h4{font-size:1rem;margin-bottom:.25rem;}
-        .product-body p{font-size:.8rem;color:var(--muted);margin-bottom:.5rem;flex:1;}
-        .product-footer{display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;}
-        .price{font-weight:700;color:var(--primary);}
+        .product:hover{transform:translateY(-6px)}
+        .product img{width:100%;height:200px;object-fit:cover}
+        .productBody{padding:1.2rem 1.5rem 1.5rem;flex:1;display:flex;flex-direction:column}
+        .productBody h3{font-size:1.4rem;margin-bottom:.4rem}
+        .productBody p{font-size:1rem;color:var(--muted);margin-bottom:.8rem;flex:1}
+        .productFooter{display:flex;align-items:center;justify-content:space-between;margin-top:.8rem}
+        .price{font-weight:800;color:var(--pink);font-size:1.3rem}
         .btn{
-          border:none;padding:.5rem .9rem;border-radius:var(--radius);font-weight:600;cursor:pointer;
+          border:none;padding:.7rem 1.3rem;border-radius:var(--radius);
+          font-weight:700;font-size:1.1rem;cursor:pointer;transition:.2s;
         }
-        .btn.primary{background:var(--primary);color:#fff;}
-        .btn:disabled{opacity:.5;cursor:not-allowed;}
-        .empty{text-align:center;padding:2rem 1rem;color:var(--muted);}
-        .item-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid #f3f3f3;}
-        .item-row:last-child{border:none;}
-        .remove{background:none;border:none;font-size:1.2rem;color:#999;cursor:pointer;}
-        .summary{border-top:1px solid #eee;margin-top:1rem;padding-top:1rem;display:flex;justify-content:space-between;align-items:center;font-size:1.1rem;font-weight:700;}
-        .checkout{width:100%;margin-top:1rem;}
-        .spinner{display:flex;gap:.25rem;justify-content:center;padding:2rem 0;}
-        .spinner div{width:8px;height:8px;background:var(--primary);border-radius:50%;animation:bounce .6s infinite alternate;}
-        .spinner div:nth-child(2){animation-delay:.15s;}
-        .spinner div:nth-child(3){animation-delay:.3s;}
-        @keyframes bounce{to{transform:translateY(-6px);}}
+        .btnPrimary{background:var(--pink);color:#fff}
+        .btn:disabled{opacity:.5;cursor:not-allowed}
+        .empty{text-align:center;padding:3rem 1rem;color:var(--muted)}
+        .empty div{font-size:3rem}
+        .itemRow{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-bottom:1px solid #fce4f0}
+        .itemRow:last-child{border:none}
+        .remove{background:none;border:none;font-size:1.6rem;color:#bbb;cursor:pointer}
+        .summary{border-top:2px solid #fce4f0;margin-top:1.2rem;padding-top:1.2rem;display:flex;justify-content:space-between;align-items:center;font-size:1.3rem;font-weight:800}
+        .checkout{width:100%;margin-top:1.2rem;font-size:1.2rem;padding:.9rem}
+        .spinner{display:flex;gap:.4rem;justify-content:center;padding:3rem 0}
+        .spinner div{width:12px;height:12px;background:var(--pink);border-radius:50%;animation:bounce .6s infinite alternate}
+        .spinner div:nth-child(2){animation-delay:.15s}
+        .spinner div:nth-child(3){animation-delay:.3s}
+        @keyframes bounce{to{transform:translateY(-8px)}}
         @media(max-width:900px){
-          .wrapper{flex-direction:column;}
-          aside{width:100%;position:static;}
+          .wrapper{flex-direction:column}
+          aside{width:100%;position:static}
         }
       `}</style>
 
       {/* ------- HEADER ------- */}
-      <header className={`top-bar ${isScrolled ? 'scrolled' : ''}`}>
-        <div className="logo">🧋 Brewtopia</div>
+      <header className={`topBar ${isScrolled ? 'scrolled' : ''}`}>
+        <div className="logo"><span>🧋</span>Brewtopia</div>
         <div className="search">
           <input
-            placeholder="Search drinks…"
+            placeholder="Search your drink…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="top-actions">
+        <div className="topActions">
           {!user ? (
-            <button className="btn primary" onClick={() => setShowAuthModal(true)}>Sign In</button>
+            <button className="btn btnPrimary" onClick={() => setShowAuthModal(true)}>Sign In</button>
           ) : (
             <>
-              <span>Hi, {user.name}</span>
+              <span style={{ fontWeight: 600 }}>Hi, {user.name}</span>
               {user.role === 'admin' && (
-                <button className="btn secondary" onClick={toAdmin}>Admin</button>
+                <button className="btn" style={{ background: '#ffe8f1', color: 'var(--pink)' }} onClick={toAdmin}>Admin</button>
               )}
-              <button className="btn secondary" onClick={logout}>Logout</button>
+              <button className="btn" style={{ background: '#ffe8f1', color: 'var(--pink)' }} onClick={logout}>Logout</button>
             </>
           )}
-          <div className="cart-tag" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>
+          <div className="cartTag" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>
             🛒 {cart.length} · ₱{total}
           </div>
         </div>
@@ -258,13 +272,13 @@ export default function Dashboard() {
             <div className="grid">
               {filtered.map((p) => (
                 <div className="product" key={p._id}>
-                  <img src={p.image || ''} alt={p.name} onError={(e) => (e.target.src = 'https://cdn-icons-png.flaticon.com/512/3075/3075977.png')} />
-                  <div className="product-body">
-                    <h4>{p.name}</h4>
+                  <img src={p.image || 'https://cdn-icons-png.flaticon.com/512/3075/3075977.png'} alt={p.name} />
+                  <div className="productBody">
+                    <h3>{p.name}</h3>
                     <p>{p.description}</p>
-                    <div className="product-footer">
+                    <div className="productFooter">
                       <span className="price">₱{p.price}</span>
-                      <button className="btn primary" onClick={() => addToCart(p)}>Add</button>
+                      <button className="btn btnPrimary" onClick={() => addToCart(p)}>Add to Cart</button>
                     </div>
                   </div>
                 </div>
@@ -273,28 +287,28 @@ export default function Dashboard() {
           )}
         </main>
 
-        {/* CART / YOUR ORDER */}
+        {/* YOUR ORDER */}
         <aside>
-          <h3>Your Order</h3>
+          <h2 style={{ marginBottom: '.8rem' }}>Your Order</h2>
           {cartLoading ? (
             <Spinner />
           ) : cart.length === 0 ? (
             <div className="empty">
-              <div style={{ fontSize: '2rem' }}>🧋</div>
+              <div>🧋</div>
               <p>Your cart is empty</p>
               <small>Add some drinks to get started</small>
             </div>
           ) : (
             <>
               {cart.map((it, idx) => (
-                <div className="item-row" key={idx}>
+                <div className="itemRow" key={idx}>
                   <div>
                     <strong>{it.name}</strong>
-                    <div style={{ fontSize: '.75rem', color: 'var(--muted)' }}>
+                    <div style={{ fontSize: '.9rem', color: 'var(--muted)' }}>
                       {it.customizations.size} · {it.customizations.sugar} · {it.customizations.ice}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem' }}>
                     <span className="price">₱{it.finalPrice || it.price}</span>
                     <button className="remove" onClick={() => remove(idx)}>×</button>
                   </div>
@@ -306,7 +320,7 @@ export default function Dashboard() {
                 <span className="price">₱{total}</span>
               </div>
 
-              <button className="btn primary checkout" disabled={!user} onClick={checkout}>
+              <button className="btn btnPrimary checkout" disabled={!user} onClick={checkout}>
                 {user ? 'Proceed to Payment' : 'Sign In to Checkout'}
               </button>
             </>
@@ -314,7 +328,7 @@ export default function Dashboard() {
         </aside>
       </div>
 
-      {/* ------- MODALS ------- */}
+      {/* MODALS */}
       {selectedProduct && (
         <CustomizationModal
           product={selectedProduct}

@@ -4,6 +4,7 @@ import CustomizationModal from './CustomizationModal';
 import AuthModal from './AuthModal';
 import AdminDashboard from './AdminDashboard';
 import PaymentModal from './PaymentModal';
+import QRCode from 'qrcode.react'; // Install this package
 import './Dashboard.css';
 
 const API_URL = 'https://brewtopia-backend.onrender.com';
@@ -138,18 +139,18 @@ function Dashboard() {
   };
 
   const LoadingSpinner = () => (
-    <div className="modern-spinner">
-      <div className="spinner-ring"></div>
-      <div className="spinner-ring"></div>
-      <div className="spinner-ring"></div>
+    <div className="premium-spinner">
+      <div className="spinner-bubble"></div>
+      <div className="spinner-bubble"></div>
+      <div className="spinner-bubble"></div>
     </div>
   );
 
   if (currentView === 'admin' && user && user.role === 'admin') {
     return (
-      <div className="admin-layout">
-        <div className="admin-header">
-          <button onClick={switchToCustomer} className="back-to-shop-btn">
+      <div className="premium-admin-layout">
+        <div className="premium-admin-header">
+          <button onClick={switchToCustomer} className="back-btn">
             ← Back to Shop
           </button>
           <div className="admin-info">
@@ -165,40 +166,46 @@ function Dashboard() {
   }
 
   return (
-    <div className="brewtopia-dashboard">
-      {/* Clean Header */}
-      <header className={`clean-header ${isScrolled ? 'scrolled' : ''}`}>
-        <div className="header-content">
-          <div className="logo-section">
-            <div className="logo-icon">🧋</div>
-            <div className="brand-text">
+    <div className="premium-dashboard">
+      {/* Premium Header */}
+      <header className={`premium-header ${isScrolled ? 'scrolled' : ''}`}>
+        <div className="header-container">
+          <div className="brand-section">
+            <div className="logo-wrapper">
+              <div className="logo-icon">🧋</div>
+              <div className="logo-glow"></div>
+            </div>
+            <div className="brand-info">
               <h1>Brewtopia</h1>
-              <span>Bubble Tea</span>
+              <span>Premium Bubble Tea</span>
             </div>
           </div>
 
-          <div className="search-container">
-            <span className="search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Search drinks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
+          <div className="search-section">
+            <div className="search-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
+                placeholder="Search premium drinks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
           </div>
 
-          <div className="header-actions">
+          <div className="actions-section">
             {user ? (
               <div className="user-menu">
                 <div className="user-info">
+                  <span className="user-avatar">👤</span>
                   <span className="user-name">{user.name}</span>
-                  {user.role === 'admin' && (
-                    <button onClick={switchToAdmin} className="admin-btn">
-                      Admin
-                    </button>
-                  )}
                 </div>
+                {user.role === 'admin' && (
+                  <button onClick={switchToAdmin} className="admin-btn">
+                    Admin Panel
+                  </button>
+                )}
                 <button onClick={handleLogout} className="logout-btn">
                   Logout
                 </button>
@@ -209,51 +216,75 @@ function Dashboard() {
               </button>
             )}
             
-            <div className="cart-button" onClick={() => cart.length > 0 && document.querySelector('.cart-panel').scrollIntoView({ behavior: 'smooth' })}>
-              <span className="cart-icon">🛒</span>
-              {cart.length > 0 && (
-                <span className="cart-count">{cart.length}</span>
-              )}
-              <span className="cart-total">₱{getTotalPrice()}</span>
+            <div className="cart-widget">
+              <div className="cart-button" onClick={() => cart.length > 0 && document.querySelector('.cart-section').scrollIntoView({ behavior: 'smooth' })}>
+                <span className="cart-icon">🛒</span>
+                {cart.length > 0 && (
+                  <span className="cart-badge">{cart.length}</span>
+                )}
+                <span className="cart-amount">₱{getTotalPrice()}</span>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="hero-section">
+      {/* Hero Section with Premium Animation */}
+      <section className="premium-hero">
+        <div className="hero-background">
+          <div className="floating-elements">
+            <div className="bubble-element"></div>
+            <div className="bubble-element"></div>
+            <div className="bubble-element"></div>
+            <div className="bubble-element"></div>
+          </div>
+        </div>
         <div className="hero-content">
           <div className="hero-text">
-            <h2>Crafted with Love</h2>
-            <p>Discover your perfect bubble tea experience</p>
+            <h2 className="hero-title">
+              <span className="title-main">Premium Bubble Tea</span>
+              <span className="title-sub">Crafted to Perfection</span>
+            </h2>
+            <p className="hero-description">
+              Experience the finest ingredients, expertly crafted into 
+              extraordinary bubble tea beverages
+            </p>
             <div className="hero-stats">
               <div className="stat-item">
                 <span className="stat-number">50+</span>
-                <span className="stat-label">Varieties</span>
+                <span className="stat-label">Premium Varieties</span>
               </div>
               <div className="stat-item">
                 <span className="stat-number">15min</span>
-                <span className="stat-label">Ready</span>
+                <span className="stat-label">Artisan Crafting</span>
               </div>
               <div className="stat-item">
                 <span className="stat-number">4.9★</span>
-                <span className="stat-label">Rating</span>
+                <span className="stat-label">Loved by Thousands</span>
               </div>
             </div>
+            <button className="cta-button" onClick={() => document.querySelector('.products-section').scrollIntoView({ behavior: 'smooth' })}>
+              Explore Menu
+              <span className="cta-arrow">→</span>
+            </button>
           </div>
         </div>
       </section>
 
       {/* Main Content */}
-      <main className="main-content">
-        <div className="content-wrapper">
-          {/* Category Filter */}
-          <section className="category-filter">
-            <div className="category-pills">
+      <main className="premium-content">
+        <div className="content-container">
+          {/* Premium Category Filter */}
+          <section className="category-section">
+            <div className="section-header">
+              <h3>Our Premium Collection</h3>
+              <p>Each beverage is carefully crafted with premium ingredients</p>
+            </div>
+            <div className="category-filters">
               {categories.map(category => (
                 <button
                   key={category}
-                  className={`category-pill ${activeCategory === category ? 'active' : ''}`}
+                  className={`category-filter ${activeCategory === category ? 'active' : ''}`}
                   onClick={() => setActiveCategory(category)}
                 >
                   {category}
@@ -262,18 +293,18 @@ function Dashboard() {
             </div>
           </section>
 
-          {/* Products Grid */}
+          {/* Premium Products Grid */}
           <section className="products-section">
             {loading ? (
-              <div className="loading-container">
+              <div className="premium-loading">
                 <LoadingSpinner />
-                <p>Preparing your drinks...</p>
+                <p className="loading-text">Crafting your premium drinks...</p>
               </div>
             ) : (
               <div className="products-grid">
                 {filteredProducts.map(product => (
-                  <div key={product._id} className="product-card">
-                    <div className="card-image">
+                  <div key={product._id} className="premium-product-card">
+                    <div className="product-visual">
                       {product.image ? (
                         <img 
                           src={product.image} 
@@ -285,7 +316,7 @@ function Dashboard() {
                           }}
                         />
                       ) : null}
-                      <div className="image-fallback">
+                      <div className="product-fallback">
                         <span className="fallback-icon">
                           {product.category === 'Milk Tea' && '🧋'}
                           {product.category === 'Fruit Tea' && '🍓'}
@@ -294,19 +325,41 @@ function Dashboard() {
                           {product.category === 'Seasonal' && '🎄'}
                         </span>
                       </div>
-                      <div className="card-badge">{product.category}</div>
+                      <div className="product-overlay">
+                        <div className="overlay-content">
+                          <h4>{product.name}</h4>
+                          <p>{product.description}</p>
+                          <button 
+                            className="overlay-cta"
+                            onClick={() => handleAddToCart(product)}
+                          >
+                            Customize Drink
+                          </button>
+                        </div>
+                      </div>
+                      <div className="product-category-badge">{product.category}</div>
                     </div>
                     
-                    <div className="card-content">
-                      <h3 className="product-title">{product.name}</h3>
-                      <p className="product-description">{product.description}</p>
-                      <div className="card-footer">
+                    <div className="product-info">
+                      <div className="info-header">
+                        <h3 className="product-name">{product.name}</h3>
                         <span className="product-price">₱{product.price}</span>
+                      </div>
+                      <p className="product-description">{product.description}</p>
+                      <div className="info-footer">
+                        <div className="product-features">
+                          <span className="feature-tag">Premium</span>
+                          <span className="feature-tag">Fresh</span>
+                          <span className="feature-tag">Artisan</span>
+                        </div>
                         <button 
-                          className="add-button"
+                          className="premium-add-btn"
                           onClick={() => handleAddToCart(product)}
                         >
-                          Add to Cart
+                          <span>Add to Cart</span>
+                          <svg className="add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
                         </button>
                       </div>
                     </div>
@@ -316,59 +369,85 @@ function Dashboard() {
             )}
           </section>
 
-          {/* Cart Section */}
+          {/* Premium Cart Section */}
           <section className="cart-section">
-            <div className="cart-panel">
+            <div className="premium-cart">
               <div className="cart-header">
-                <h3>Your Order</h3>
-                <span className="item-count">{cart.length} items</span>
+                <h3 className="cart-title">Your Premium Order</h3>
+                <span className="cart-count">{cart.length} items</span>
               </div>
 
               {cartLoading ? (
-                <div className="loading-container">
+                <div className="cart-loading">
                   <LoadingSpinner />
+                  <p>Updating your order...</p>
                 </div>
               ) : cart.length === 0 ? (
-                <div className="empty-cart">
-                  <div className="empty-icon">🧋</div>
-                  <p>Your cart is empty</p>
-                  <span className="empty-subtext">Add some drinks to get started</span>
+                <div className="empty-cart-state">
+                  <div className="empty-visual">
+                    <div className="empty-icon">🧋</div>
+                    <div className="empty-pattern"></div>
+                  </div>
+                  <h4>Your cart awaits</h4>
+                  <p>Add premium drinks to begin your experience</p>
                 </div>
               ) : (
                 <>
                   <div className="cart-items">
                     {cart.map((item, index) => (
-                      <div key={index} className="cart-item">
-                        <div className="item-info">
-                          <h4 className="item-name">{item.name}</h4>
-                          <div className="item-details">
-                            <span>{item.customizations.size}</span>
-                            <span>{item.customizations.sugar}</span>
-                            <span>{item.customizations.ice}</span>
+                      <div key={index} className="premium-cart-item">
+                        <div className="item-visual">
+                          <div className="item-image">
+                            {item.category === 'Milk Tea' && '🧋'}
+                            {item.category === 'Fruit Tea' && '🍓'}
+                            {item.category === 'Coffee' && '☕'}
+                            {item.category === 'Specialty' && '🌟'}
+                            {item.category === 'Seasonal' && '🎄'}
+                          </div>
+                        </div>
+                        <div className="item-details">
+                          <div className="item-header">
+                            <h4 className="item-name">{item.name}</h4>
+                            <button 
+                              className="item-remove"
+                              onClick={() => removeFromCart(index)}
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                          <div className="item-customizations">
+                            <span className="custom-item">{item.customizations.size}</span>
+                            <span className="custom-item">{item.customizations.sugar}</span>
+                            <span className="custom-item">{item.customizations.ice}</span>
                           </div>
                           <span className="item-price">₱{item.finalPrice || item.price}</span>
                         </div>
-                        <button 
-                          className="remove-btn"
-                          onClick={() => removeFromCart(index)}
-                        >
-                          ×
-                        </button>
                       </div>
                     ))}
                   </div>
                   
                   <div className="cart-summary">
-                    <div className="summary-row">
-                      <span>Total</span>
-                      <span className="total-price">₱{getTotalPrice()}</span>
+                    <div className="summary-header">
+                      <span>Order Total</span>
+                      <span className="summary-price">₱{getTotalPrice()}</span>
                     </div>
                     <button 
-                      className={`checkout-btn ${!user ? 'disabled' : ''}`}
+                      className={`premium-checkout-btn ${!user ? 'disabled' : ''}`}
                       onClick={handleCheckout}
                       disabled={!user}
                     >
-                      {user ? 'Proceed to Payment' : 'Sign In to Checkout'}
+                      {user ? (
+                        <>
+                          <span>Proceed to Payment</span>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </>
+                      ) : (
+                        'Sign In to Continue'
+                      )}
                     </button>
                   </div>
                 </>
@@ -403,25 +482,30 @@ function Dashboard() {
         />
       )}
 
-      {/* Footer */}
-      <footer className="clean-footer">
+      {/* Premium Footer */}
+      <footer className="premium-footer">
         <div className="footer-content">
           <div className="footer-brand">
-            <span className="footer-logo">🧋</span>
-            <div className="footer-text">
+            <div className="footer-logo">🧋</div>
+            <div className="footer-info">
               <h4>Brewtopia</h4>
-              <p>Bubble Tea Paradise</p>
+              <p>Premium Bubble Tea Experience</p>
             </div>
           </div>
           <div className="footer-links">
-            <a href="#menu">Menu</a>
-            <a href="#about">About</a>
-            <a href="#contact">Contact</a>
-            <a href="#privacy">Privacy</a>
+            <a href="#menu" className="footer-link">Menu</a>
+            <a href="#about" className="footer-link">About</a>
+            <a href="#contact" className="footer-link">Contact</a>
+            <a href="#privacy" className="footer-link">Privacy</a>
+          </div>
+          <div className="footer-social">
+            <a href="#" className="social-link">📱</a>
+            <a href="#" className="social-link">📧</a>
+            <a href="#" className="social-link">📍</a>
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; 2024 Brewtopia. All rights reserved.</p>
+          <p>&copy; 2024 Brewtopia. Crafted with love for bubble tea enthusiasts.</p>
         </div>
       </footer>
     </div>

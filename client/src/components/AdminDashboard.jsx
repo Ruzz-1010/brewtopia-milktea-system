@@ -7,33 +7,31 @@ const API_URL = 'https://brewtopia-backend.onrender.com';
 function AdminDashboard() {
   const [stats, setStats] = useState({});
   const [orders, setOrders] = useState([]);
-  const [analytics, setAnalytics] = useState({});
-  const [inventory, setInventory] = useState([]);
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
+    setLoading(true);
     try {
-      const [statsRes, ordersRes, analyticsRes, inventoryRes, productsRes] = await Promise.all([
+      const [statsRes, ordersRes, productsRes] = await Promise.all([
         axios.get(`${API_URL}/api/admin/dashboard`),
-        axios.get(`${API_URL}/api/admin/orders?limit=10`),
-        axios.get(`${API_URL}/api/admin/analytics`),
-        axios.get(`${API_URL}/api/admin/inventory`),
-        axios.get(`${API_URL}/api/admin/products`)
+        axios.get(`${API_URL}/api/admin/orders?limit=20`),
+        axios.get(`${API_URL}/api/products`)
       ]);
       
       setStats(statsRes.data);
-      setOrders(ordersRes.data.orders);
-      setAnalytics(analyticsRes.data);
-      setInventory(inventoryRes.data);
+      setOrders(ordersRes.data.orders || []);
       setProducts(productsRes.data);
     } catch (error) {
       console.error('Error loading admin data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,177 +46,213 @@ function AdminDashboard() {
     }
   };
 
-  const updateInventory = async (itemId, newStock) => {
-    try {
-      await axios.put(`${API_URL}/api/admin/inventory/${itemId}`, {
-        stock: newStock
-      });
-      loadDashboardData();
-    } catch (error) {
-      console.error('Error updating inventory:', error);
-    }
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#f39c12',
+      confirmed: '#3498db',
+      preparing: '#9b59b6',
+      ready: '#2ecc71',
+      completed: '#27ae60',
+      cancelled: '#e74c3c'
+    };
+    return colors[status] || '#95a5a6';
   };
 
-  const toggleProductStatus = async (productId, currentStatus) => {
-    try {
-      await axios.put(`${API_URL}/api/admin/products/${productId}`, {
-        active: !currentStatus
-      });
-      loadDashboardData();
-    } catch (error) {
-      console.error('Error updating product:', error);
-    }
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-PH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const calculateRevenue = () => {
+    return orders
+      .filter(order => order.status === 'completed' || order.status === 'ready')
+      .reduce((total, order) => total + (order.totalAmount || 0), 0);
   };
 
   return (
     <div className="admin-dashboard">
       {/* Mobile Header */}
-      <header className="admin-header-mobile">
+      <header className="admin-mobile-header">
         <button 
           className="menu-toggle"
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         >
-          ☰
+          <span>☰</span>
         </button>
-        <h1>🧋 Brewtopia</h1>
+        <div className="mobile-title">
+          <h1>🧋 Brewtopia</h1>
+          <span>Admin</span>
+        </div>
+        <button className="refresh-btn" onClick={loadDashboardData}>
+          🔄
+        </button>
       </header>
 
-      <div className="admin-layout">
-        {/* Sidebar Navigation */}
+      <div className="admin-container">
+        {/* Sidebar */}
         <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
           <div className="sidebar-header">
-            <h2>🧋 Brewtopia</h2>
-            <p>Admin Panel</p>
+            <div className="brand">
+              <div className="brand-icon">🧋</div>
+              <div className="brand-text">
+                <h2>Brewtopia</h2>
+                <p>Admin Panel</p>
+              </div>
+            </div>
           </div>
-          
+
           <nav className="sidebar-nav">
             <button 
               className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
               onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}
             >
-              📊 Dashboard
+              <span className="nav-icon">📊</span>
+              <span className="nav-text">Dashboard</span>
             </button>
+
             <button 
               className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
               onClick={() => { setActiveTab('orders'); setIsSidebarOpen(false); }}
             >
-              🛒 Orders
+              <span className="nav-icon">🛒</span>
+              <span className="nav-text">Orders</span>
+              {stats.pendingOrders > 0 && (
+                <span className="nav-badge">{stats.pendingOrders}</span>
+              )}
             </button>
+
             <button 
               className={`nav-item ${activeTab === 'products' ? 'active' : ''}`}
               onClick={() => { setActiveTab('products'); setIsSidebarOpen(false); }}
             >
-              🥤 Products
+              <span className="nav-icon">🥤</span>
+              <span className="nav-text">Products</span>
             </button>
-            <button 
-              className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('inventory'); setIsSidebarOpen(false); }}
-            >
-              📦 Inventory
-            </button>
+
             <button 
               className={`nav-item ${activeTab === 'analytics' ? 'active' : ''}`}
               onClick={() => { setActiveTab('analytics'); setIsSidebarOpen(false); }}
             >
-              📈 Analytics
-            </button>
-            <button 
-              className={`nav-item ${activeTab === 'promos' ? 'active' : ''}`}
-              onClick={() => { setActiveTab('promos'); setIsSidebarOpen(false); }}
-            >
-              🎯 Promos
+              <span className="nav-icon">📈</span>
+              <span className="nav-text">Analytics</span>
             </button>
           </nav>
+
+          <div className="sidebar-footer">
+            <div className="user-info">
+              <div className="user-avatar">👤</div>
+              <div className="user-details">
+                <span className="user-name">Admin User</span>
+                <span className="user-role">Administrator</span>
+              </div>
+            </div>
+          </div>
         </aside>
 
         {/* Main Content */}
         <main className="admin-main">
+          {loading && (
+            <div className="loading-overlay">
+              <div className="loading-spinner"></div>
+              <p>Loading data...</p>
+            </div>
+          )}
+
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
-            <div className="dashboard-tab">
+            <div className="dashboard-content">
               <div className="page-header">
                 <h1>Dashboard Overview</h1>
-                <p>Welcome to Brewtopia Admin Panel</p>
+                <p>Real-time business insights and metrics</p>
               </div>
 
-              {/* Stats Grid */}
+              {/* Stats Cards */}
               <div className="stats-grid">
-                <div className="stat-card primary">
-                  <div className="stat-icon">📦</div>
+                <div className="stat-card">
+                  <div className="stat-header">
+                    <div className="stat-icon revenue">💰</div>
+                    <div className="stat-trend up">+12%</div>
+                  </div>
+                  <div className="stat-content">
+                    <h3>Total Revenue</h3>
+                    <div className="stat-number">₱{calculateRevenue().toLocaleString()}</div>
+                    <p className="stat-description">All time sales</p>
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-header">
+                    <div className="stat-icon orders">📦</div>
+                    <div className="stat-trend up">+5%</div>
+                  </div>
                   <div className="stat-content">
                     <h3>Total Orders</h3>
                     <div className="stat-number">{stats.totalOrders || 0}</div>
+                    <p className="stat-description">All orders processed</p>
                   </div>
                 </div>
-                <div className="stat-card warning">
-                  <div className="stat-icon">⏳</div>
+
+                <div className="stat-card">
+                  <div className="stat-header">
+                    <div className="stat-icon pending">⏳</div>
+                    <div className="stat-trend down">-3%</div>
+                  </div>
                   <div className="stat-content">
                     <h3>Pending Orders</h3>
                     <div className="stat-number">{stats.pendingOrders || 0}</div>
+                    <p className="stat-description">Awaiting processing</p>
                   </div>
                 </div>
-                <div className="stat-card info">
-                  <div className="stat-icon">📅</div>
+
+                <div className="stat-card">
+                  <div className="stat-header">
+                    <div className="stat-icon today">📅</div>
+                    <div className="stat-trend up">+8%</div>
+                  </div>
                   <div className="stat-content">
                     <h3>Today's Orders</h3>
                     <div className="stat-number">{stats.todayOrders || 0}</div>
-                  </div>
-                </div>
-                <div className="stat-card success">
-                  <div className="stat-icon">💰</div>
-                  <div className="stat-content">
-                    <h3>Total Revenue</h3>
-                    <div className="stat-number">₱{stats.totalRevenue || 0}</div>
+                    <p className="stat-description">Orders today</p>
                   </div>
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="quick-actions">
-                <h2>Quick Actions</h2>
-                <div className="actions-grid">
-                  <button className="action-btn" onClick={() => setActiveTab('products')}>
-                    <span>➕</span>
-                    Add New Product
-                  </button>
-                  <button className="action-btn" onClick={() => setActiveTab('promos')}>
-                    <span>🎯</span>
-                    Manage Promos
-                  </button>
-                  <button className="action-btn" onClick={() => setActiveTab('inventory')}>
-                    <span>📦</span>
-                    Check Inventory
-                  </button>
-                </div>
-              </div>
-
-              {/* Recent Orders */}
-              <div className="recent-orders">
+              {/* Recent Activity */}
+              <div className="activity-section">
                 <div className="section-header">
                   <h2>Recent Orders</h2>
-                  <button className="view-all-btn" onClick={() => setActiveTab('orders')}>
-                    View All
+                  <button 
+                    className="view-all-btn"
+                    onClick={() => setActiveTab('orders')}
+                  >
+                    View All Orders
                   </button>
                 </div>
+
                 <div className="orders-list">
-                  {orders.slice(0, 5).map(order => (
-                    <div key={order._id} className="order-card">
-                      <div className="order-header">
-                        <strong>Order #{order.orderNumber}</strong>
-                        <span className={`status-badge ${order.status}`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      <div className="order-details">
-                        <span>👤 {order.customer?.name}</span>
-                        <span>💰 ₱{order.totalAmount}</span>
-                        <span>📅 {new Date(order.orderDate).toLocaleDateString()}</span>
+                  {orders.slice(0, 6).map(order => (
+                    <div key={order._id} className="order-item">
+                      <div className="order-info">
+                        <div className="order-main">
+                          <h4>Order #{order.orderNumber}</h4>
+                          <span className="customer">{order.customer?.name}</span>
+                        </div>
+                        <div className="order-details">
+                          <span className="amount">₱{order.totalAmount}</span>
+                          <span className="date">{formatDate(order.orderDate)}</span>
+                        </div>
                       </div>
                       <div className="order-actions">
                         <select 
                           value={order.status}
                           onChange={(e) => updateOrderStatus(order._id, e.target.value)}
                           className="status-select"
+                          style={{ borderColor: getStatusColor(order.status) }}
                         >
                           <option value="pending">⏳ Pending</option>
                           <option value="confirmed">✅ Confirmed</option>
@@ -236,34 +270,53 @@ function AdminDashboard() {
 
           {/* Orders Tab */}
           {activeTab === 'orders' && (
-            <div className="orders-tab">
+            <div className="orders-content">
               <div className="page-header">
-                <h1>Order Management</h1>
-                <p>Manage and track all customer orders</p>
+                <div className="header-content">
+                  <h1>Order Management</h1>
+                  <p>Manage and track customer orders</p>
+                </div>
+                <div className="header-actions">
+                  <button className="btn-primary" onClick={loadDashboardData}>
+                    🔄 Refresh
+                  </button>
+                </div>
               </div>
 
-              <div className="orders-table-container">
+              <div className="orders-table">
                 <div className="table-header">
-                  <span>Order #</span>
-                  <span>Customer</span>
-                  <span>Items</span>
-                  <span>Amount</span>
-                  <span>Status</span>
-                  <span>Date</span>
-                  <span>Actions</span>
+                  <div className="table-row header-row">
+                    <div>Order #</div>
+                    <div>Customer</div>
+                    <div>Items</div>
+                    <div>Amount</div>
+                    <div>Status</div>
+                    <div>Date</div>
+                    <div>Actions</div>
+                  </div>
                 </div>
                 <div className="table-body">
                   {orders.map(order => (
                     <div key={order._id} className="table-row">
-                      <span className="order-number">#{order.orderNumber}</span>
-                      <span className="customer">{order.customer?.name}</span>
-                      <span className="items">{order.items?.length} items</span>
-                      <span className="amount">₱{order.totalAmount}</span>
-                      <span className="status">
+                      <div className="order-number">
+                        <strong>#{order.orderNumber}</strong>
+                      </div>
+                      <div className="customer">
+                        <div className="customer-name">{order.customer?.name}</div>
+                        <div className="customer-contact">{order.customer?.phone}</div>
+                      </div>
+                      <div className="items">
+                        {order.items?.length || 0} items
+                      </div>
+                      <div className="amount">
+                        <strong>₱{order.totalAmount}</strong>
+                      </div>
+                      <div className="status">
                         <select 
                           value={order.status}
                           onChange={(e) => updateOrderStatus(order._id, e.target.value)}
                           className={`status-select ${order.status}`}
+                          style={{ borderColor: getStatusColor(order.status) }}
                         >
                           <option value="pending">⏳ Pending</option>
                           <option value="confirmed">✅ Confirmed</option>
@@ -271,11 +324,14 @@ function AdminDashboard() {
                           <option value="ready">🥤 Ready</option>
                           <option value="completed">📦 Completed</option>
                         </select>
-                      </span>
-                      <span className="date">{new Date(order.orderDate).toLocaleDateString()}</span>
-                      <span className="actions">
-                        <button className="btn-view">👁️ View</button>
-                      </span>
+                      </div>
+                      <div className="date">
+                        {formatDate(order.orderDate)}
+                      </div>
+                      <div className="actions">
+                        <button className="btn-action view">👁️</button>
+                        <button className="btn-action edit">✏️</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -285,69 +341,44 @@ function AdminDashboard() {
 
           {/* Products Tab */}
           {activeTab === 'products' && (
-            <div className="products-tab">
+            <div className="products-content">
               <div className="page-header">
-                <h1>Product Management</h1>
-                <p>Manage your milk tea menu and products</p>
-                <button className="btn-primary">➕ Add New Product</button>
+                <div className="header-content">
+                  <h1>Product Management</h1>
+                  <p>Manage your milk tea menu</p>
+                </div>
+                <div className="header-actions">
+                  <button className="btn-primary">
+                    ➕ Add Product
+                  </button>
+                </div>
               </div>
 
               <div className="products-grid">
                 {products.map(product => (
-                  <div key={product._id} className="product-card">
-                    <img src={product.image} alt={product.name} className="product-image" />
+                  <div key={product.id} className="product-card">
+                    <div className="product-image">
+                      <span className="product-emoji">{product.image}</span>
+                    </div>
                     <div className="product-info">
                       <h3>{product.name}</h3>
                       <p className="product-description">{product.description}</p>
-                      <div className="product-price">₱{product.price}</div>
-                      <div className="product-actions">
-                        <button className="btn-edit">✏️ Edit</button>
-                        <button 
-                          className={`btn-status ${product.active ? 'active' : 'inactive'}`}
-                          onClick={() => toggleProductStatus(product._id, product.active)}
-                        >
-                          {product.active ? '✅ Active' : '❌ Inactive'}
-                        </button>
+                      <div className="product-meta">
+                        <span className="product-price">₱{product.price}</span>
+                        <span className="product-category">{product.category}</span>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Inventory Tab */}
-          {activeTab === 'inventory' && (
-            <div className="inventory-tab">
-              <div className="page-header">
-                <h1>Inventory Management</h1>
-                <p>Track and manage your ingredient stock</p>
-              </div>
-
-              <div className="inventory-list">
-                {inventory.map(item => (
-                  <div key={item._id} className="inventory-item">
-                    <div className="item-info">
-                      <h3>{item.name}</h3>
-                      <p className="item-category">{item.category}</p>
-                    </div>
-                    <div className="item-stock">
-                      <div className="stock-level">
-                        <div className={`stock-indicator ${item.stock < item.minStock ? 'low' : 'adequate'}`}>
-                          {item.stock} units
+                      <div className="customization-info">
+                        <div className="customization-item">
+                          <span>Sizes: {product.customizations?.sizes?.length || 0}</span>
                         </div>
-                        {item.stock < item.minStock && (
-                          <span className="low-stock-warning">⚠️ Low Stock!</span>
-                        )}
+                        <div className="customization-item">
+                          <span>Add-ons: {product.customizations?.addons?.length || 0}</span>
+                        </div>
                       </div>
-                      <div className="stock-actions">
-                        <button 
-                          className="btn-stock"
-                          onClick={() => updateInventory(item._id, item.stock + 10)}
-                        >
-                          ➕ Restock
-                        </button>
-                      </div>
+                    </div>
+                    <div className="product-actions">
+                      <button className="btn-secondary">✏️ Edit</button>
+                      <button className="btn-status active">✅ Active</button>
                     </div>
                   </div>
                 ))}
@@ -357,75 +388,75 @@ function AdminDashboard() {
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
-            <div className="analytics-tab">
+            <div className="analytics-content">
               <div className="page-header">
                 <h1>Sales Analytics</h1>
-                <p>Track your business performance</p>
+                <p>Business performance insights</p>
               </div>
 
-              {/* Popular Products */}
-              <div className="analytics-section">
-                <h2>🥤 Popular Products</h2>
-                <div className="products-ranking">
-                  {analytics.popularProducts?.map((product, index) => (
-                    <div key={index} className="rank-item">
-                      <div className="rank-number">{index + 1}</div>
-                      <div className="product-details">
-                        <span className="product-name">{product._id}</span>
-                        <span className="product-stats">
-                          Sold: {product.totalSold} | Revenue: ₱{product.revenue}
+              <div className="analytics-grid">
+                <div className="analytics-card">
+                  <h3>📊 Order Statistics</h3>
+                  <div className="analytics-stats">
+                    <div className="stat-item">
+                      <span className="stat-label">Completed Orders</span>
+                      <span className="stat-value">
+                        {orders.filter(o => o.status === 'completed').length}
+                      </span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Average Order Value</span>
+                      <span className="stat-value">
+                        ₱{orders.length > 0 ? (calculateRevenue() / orders.length).toFixed(2) : '0.00'}
+                      </span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">Popular Product</span>
+                      <span className="stat-value">
+                        {products[0]?.name || 'Classic Milk Tea'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="analytics-card">
+                  <h3>📈 Quick Insights</h3>
+                  <div className="insights-list">
+                    <div className="insight-item positive">
+                      <span>📈 Sales trending up this week</span>
+                    </div>
+                    <div className="insight-item positive">
+                      <span>👍 Customer satisfaction high</span>
+                    </div>
+                    <div className="insight-item neutral">
+                      <span>⚡ Fast order processing</span>
+                    </div>
+                    <div className="insight-item negative">
+                      <span>⚠️ Monitor inventory levels</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="recent-activity">
+                <h3>Recent Activity</h3>
+                <div className="activity-list">
+                  {orders.slice(0, 5).map(order => (
+                    <div key={order._id} className="activity-item">
+                      <div className="activity-icon">🛒</div>
+                      <div className="activity-content">
+                        <p>
+                          <strong>Order #{order.orderNumber}</strong> from {order.customer?.name}
+                        </p>
+                        <span className="activity-time">
+                          {formatDate(order.orderDate)}
                         </span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Daily Sales */}
-              <div className="analytics-section">
-                <h2>📈 Last 7 Days Sales</h2>
-                <div className="sales-chart">
-                  {analytics.dailySales?.map(day => (
-                    <div key={day._id} className="chart-bar-container">
-                      <div className="bar-label">{day._id}</div>
-                      <div 
-                        className="chart-bar" 
-                        style={{ height: `${(day.total / Math.max(...analytics.dailySales.map(d => d.total))) * 150}px` }}
-                      >
-                        <div className="bar-value">₱{day.total}</div>
+                      <div className={`activity-status ${order.status}`}>
+                        {order.status}
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Promos Tab */}
-          {activeTab === 'promos' && (
-            <div className="promos-tab">
-              <div className="page-header">
-                <h1>Promotions Management</h1>
-                <p>Set up and manage your promotions</p>
-                <button className="btn-primary">🎯 Add New Promotion</button>
-              </div>
-
-              <div className="promos-grid">
-                <div className="promo-card">
-                  <h3>🎉 Summer Special</h3>
-                  <p>20% off on all fruit teas</p>
-                  <div className="promo-details">
-                    <span>Valid until: 2024-08-31</span>
-                    <span className="status active">Active</span>
-                  </div>
-                </div>
-                <div className="promo-card">
-                  <h3>👥 Buy 1 Get 1</h3>
-                  <p>Buy any large milk tea, get one regular free</p>
-                  <div className="promo-details">
-                    <span>Valid until: 2024-07-15</span>
-                    <span className="status inactive">Inactive</span>
-                  </div>
                 </div>
               </div>
             </div>

@@ -39,17 +39,19 @@ function AdminDashboard() {
     try {
       const [productsRes, ordersRes, usersRes] = await Promise.all([
         axios.get(`${API_URL}/api/products`),
-        // Try different order endpoints
+        // Try multiple order endpoints
         axios.get(`${API_URL}/api/orders`).catch(() => 
           axios.get(`${API_URL}/api/admin/orders`).catch(() => ({ data: [] }))
         ),
-        // Try to get users
-        axios.get(`${API_URL}/api/admin/users`).catch(() => ({ data: [] }))
+        // Try to get real users from database
+        axios.get(`${API_URL}/api/users`).catch(() => 
+          axios.get(`${API_URL}/api/admin/users`).catch(() => ({ data: [] }))
+        )
       ]);
       
       setProducts(productsRes.data);
       
-      // Handle orders response - check different response structures
+      // Handle orders response
       const ordersData = ordersRes.data;
       if (Array.isArray(ordersData)) {
         setOrders(ordersData);
@@ -59,7 +61,13 @@ function AdminDashboard() {
         setOrders([]);
       }
       
-      setUsers(usersRes.data || []);
+      // Handle users response
+      const usersData = usersRes.data;
+      if (Array.isArray(usersData)) {
+        setUsers(usersData);
+      } else {
+        setUsers([]);
+      }
       
     } catch (error) {
       console.error('Error loading data:', error);
@@ -72,9 +80,17 @@ function AdminDashboard() {
   // ORDER MANAGEMENT
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      await axios.put(`${API_URL}/api/admin/orders/${orderId}/status`, {
-        status: newStatus
-      });
+      // Try admin endpoint first
+      try {
+        await axios.put(`${API_URL}/api/admin/orders/${orderId}/status`, {
+          status: newStatus
+        });
+      } catch (adminError) {
+        // Fallback to regular endpoint
+        await axios.put(`${API_URL}/api/orders/${orderId}/status`, {
+          status: newStatus
+        });
+      }
       showNotification('Order status updated!');
       loadDashboardData();
     } catch (error) {
@@ -166,7 +182,7 @@ function AdminDashboard() {
     }
   };
 
-  // USER MANAGEMENT
+  // USER MANAGEMENT FUNCTIONS
   const updateUserRole = async (userId, newRole) => {
     try {
       await axios.put(`${API_URL}/api/admin/users/${userId}/role`, {
@@ -707,6 +723,13 @@ function AdminDashboard() {
                   <div className="empty-icon">👥</div>
                   <h3>No users found</h3>
                   <p>Users will appear here when they register.</p>
+                  <div className="debug-info">
+                    <p><strong>Debug Info:</strong> Trying to fetch from:</p>
+                    <ul>
+                      <li><code>{API_URL}/api/users</code></li>
+                      <li><code>{API_URL}/api/admin/users</code></li>
+                    </ul>
+                  </div>
                 </div>
               ) : (
                 <div className="users-table">

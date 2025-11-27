@@ -153,3 +153,60 @@
   .login-btn:hover {
     background: #f0f0f0;
   }
+  /* Add these to your existing Dashboard.css */
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.admin-access-btn {
+  background: #8B4513;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.admin-access-btn:hover {
+  background: #A0522D;
+}
+
+.logout-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.logout-btn:hover {
+  background: #c0392b;
+}
+
+.admin-switcher {
+  background: #2c3e50;
+  color: white;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.switch-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.switch-btn:hover {
+  background: #2980b9;
+}

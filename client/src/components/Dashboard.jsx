@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CustomizationModal from './CustomizationModal';
 import AuthModal from './AuthModal';
+import AdminDashboard from './AdminDashboard';
 import './Dashboard.css';
 
 const API_URL = 'https://brewtopia-backend.onrender.com';
@@ -12,9 +13,20 @@ function Dashboard() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState(null);
+  const [currentView, setCurrentView] = useState('customer'); // 'customer' or 'admin'
 
   useEffect(() => {
     loadProducts();
+    // Check if user is already logged in
+    const savedUser = localStorage.getItem('brewtopia_user');
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      setUser(userData);
+      // Auto-switch to admin view if user is admin
+      if (userData.role === 'admin') {
+        setCurrentView('admin');
+      }
+    }
   }, []);
 
   const loadProducts = async () => {
@@ -54,8 +66,52 @@ function Dashboard() {
 
   const handleLogin = (userData) => {
     setUser(userData);
+    // Save to localStorage
+    localStorage.setItem('brewtopia_user', JSON.stringify(userData));
+    localStorage.setItem('brewtopia_token', userData.token);
+    
+    // Auto-switch to admin view if admin
+    if (userData.role === 'admin') {
+      setCurrentView('admin');
+    }
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    setCurrentView('customer');
+    localStorage.removeItem('brewtopia_user');
+    localStorage.removeItem('brewtopia_token');
+  };
+
+  const switchToAdmin = () => {
+    if (user && user.role === 'admin') {
+      setCurrentView('admin');
+    }
+  };
+
+  const switchToCustomer = () => {
+    setCurrentView('customer');
+  };
+
+  // If user is admin and in admin view, show AdminDashboard
+  if (currentView === 'admin' && user && user.role === 'admin') {
+    return (
+      <div>
+        <div className="admin-switcher">
+          <button onClick={switchToCustomer} className="switch-btn">
+            🧋 Switch to Customer View
+          </button>
+          <span>Welcome, Admin {user.name}! 👋</span>
+          <button onClick={handleLogout} className="logout-btn">
+            Logout
+          </button>
+        </div>
+        <AdminDashboard />
+      </div>
+    );
+  }
+
+  // Customer View
   return (
     <div className="dashboard">
       {/* Header */}
@@ -63,7 +119,17 @@ function Dashboard() {
         <h1>🧋 Brewtopia Milk Tea</h1>
         <div className="header-actions">
           {user ? (
-            <span>Welcome, {user.name}! 👋</span>
+            <div className="user-info">
+              <span>Welcome, {user.name}! 👋</span>
+              {user.role === 'admin' && (
+                <button onClick={switchToAdmin} className="admin-access-btn">
+                  ⚙️ Admin Panel
+                </button>
+              )}
+              <button onClick={handleLogout} className="logout-btn">
+                Logout
+              </button>
+            </div>
           ) : (
             <button 
               className="login-btn"

@@ -24,6 +24,16 @@ function AdminDashboard() {
     category: 'Milk Tea'
   });
 
+  // Sample images for milk tea products
+  const sampleImages = [
+    'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1525385133512-2f3bdd24ac30?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=400&h=300&fit=crop'
+  ];
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -36,16 +46,13 @@ function AdminDashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const productsRes = await axios.get(`${API_URL}/api/products`);
-      setProducts(productsRes.data);
+      const [productsRes, ordersRes] = await Promise.all([
+        axios.get(`${API_URL}/api/products`),
+        axios.get(`${API_URL}/api/orders`).catch(() => ({ data: [] }))
+      ]);
       
-      // Try to load orders if endpoint exists
-      try {
-        const ordersRes = await axios.get(`${API_URL}/api/orders`);
-        setOrders(ordersRes.data.orders || ordersRes.data || []);
-      } catch (orderError) {
-        console.log('Orders endpoint not available');
-      }
+      setProducts(productsRes.data);
+      setOrders(ordersRes.data.orders || ordersRes.data || []);
       
     } catch (error) {
       console.error('Error loading data:', error);
@@ -55,13 +62,13 @@ function AdminDashboard() {
     }
   };
 
-  // PRODUCT MANAGEMENT - SIMPLIFIED
+  // PRODUCT MANAGEMENT - FIXED
   const handleAddProduct = () => {
     setEditingProduct(null);
     setProductForm({
       name: '',
       price: '',
-      image: '',
+      image: sampleImages[0],
       description: '',
       category: 'Milk Tea'
     });
@@ -90,16 +97,38 @@ function AdminDashboard() {
         price: Number(productForm.price),
         image: productForm.image,
         description: productForm.description,
-        category: productForm.category
+        category: productForm.category,
+        customizations: {
+          sizes: [
+            { name: "Regular", price: 0 },
+            { name: "Large", price: 20 },
+            { name: "X-Large", price: 30 }
+          ],
+          sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+          iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+          addons: [
+            { name: "Pearls", price: 15 },
+            { name: "Pudding", price: 20 },
+            { name: "Whip Cream", price: 25 }
+          ]
+        }
       };
 
       if (editingProduct) {
-        // Update existing product
-        await axios.put(`${API_URL}/api/products/${editingProduct._id}`, productData);
+        // Try admin endpoint first, fallback to regular endpoint
+        try {
+          await axios.put(`${API_URL}/api/admin/products/${editingProduct._id}`, productData);
+        } catch (adminError) {
+          await axios.put(`${API_URL}/api/products/${editingProduct._id}`, productData);
+        }
         showNotification('Product updated successfully!');
       } else {
-        // Add new product
-        await axios.post(`${API_URL}/api/products`, productData);
+        // Try admin endpoint first, fallback to regular endpoint
+        try {
+          await axios.post(`${API_URL}/api/admin/products`, productData);
+        } catch (adminError) {
+          await axios.post(`${API_URL}/api/products`, productData);
+        }
         showNotification('Product added successfully!');
       }
       
@@ -107,7 +136,7 @@ function AdminDashboard() {
       loadDashboardData();
     } catch (error) {
       console.error('Error saving product:', error);
-      showNotification('Error saving product: ' + (error.response?.data?.message || error.message));
+      showNotification('Error saving product. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -116,7 +145,12 @@ function AdminDashboard() {
   const deleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        await axios.delete(`${API_URL}/api/products/${productId}`);
+        // Try admin endpoint first, fallback to regular endpoint
+        try {
+          await axios.delete(`${API_URL}/api/admin/products/${productId}`);
+        } catch (adminError) {
+          await axios.delete(`${API_URL}/api/products/${productId}`);
+        }
         showNotification('Product deleted successfully!');
         loadDashboardData();
       } catch (error) {
@@ -124,6 +158,10 @@ function AdminDashboard() {
         showNotification('Error deleting product');
       }
     }
+  };
+
+  const handleImageSelect = (imageUrl) => {
+    setProductForm({...productForm, image: imageUrl});
   };
 
   // UTILITY FUNCTIONS
@@ -178,7 +216,7 @@ function AdminDashboard() {
         </button>
         <div className="mobile-title">
           <h1>🧋 Brewtopia</h1>
-          <span>Admin</span>
+          <span>Admin Panel</span>
         </div>
         <button className="refresh-btn" onClick={loadDashboardData}>
           🔄
@@ -219,11 +257,12 @@ function AdminDashboard() {
               </div>
               
               <div className="form-group">
-                <label>Product Image URL</label>
+                <label>Product Image URL *</label>
                 <input
                   type="url"
                   value={productForm.image}
                   onChange={(e) => setProductForm({...productForm, image: e.target.value})}
+                  required
                   placeholder="https://example.com/image.jpg"
                 />
               </div>
@@ -239,11 +278,32 @@ function AdminDashboard() {
                       className="preview-image"
                       onError={(e) => {
                         e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
                       }}
                     />
+                    <div className="preview-fallback" style={{display: 'none'}}>
+                      ❌ Invalid Image URL
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* Quick Image Selection */}
+              <div className="form-group">
+                <label>Quick Image Selection:</label>
+                <div className="image-options">
+                  {sampleImages.map((imageUrl, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className={`image-option ${productForm.image === imageUrl ? 'selected' : ''}`}
+                      onClick={() => handleImageSelect(imageUrl)}
+                    >
+                      <img src={imageUrl} alt={`Option ${index + 1}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
               
               <div className="form-group">
                 <label>Category *</label>
@@ -312,6 +372,9 @@ function AdminDashboard() {
             >
               <span className="nav-icon">🛒</span>
               <span className="nav-text">Orders</span>
+              {getOrderCountByStatus('pending') > 0 && (
+                <span className="nav-badge">{getOrderCountByStatus('pending')}</span>
+              )}
             </button>
 
             <button 
@@ -329,7 +392,11 @@ function AdminDashboard() {
         <main className="admin-main">
           {loading && (
             <div className="loading-overlay">
-              <div className="loading-spinner"></div>
+              <div className="bubble-tea-spinner">
+                <div className="bubble"></div>
+                <div className="bubble"></div>
+                <div className="bubble"></div>
+              </div>
               <p>Loading data...</p>
             </div>
           )}
@@ -345,14 +412,16 @@ function AdminDashboard() {
               {/* Stats Cards */}
               <div className="stats-grid">
                 <div className="stat-card">
+                  <div className="stat-icon">🥤</div>
                   <div className="stat-content">
                     <h3>Total Products</h3>
                     <div className="stat-number">{products.length}</div>
-                    <p className="stat-description">Available items</p>
+                    <p className="stat-description">Menu items</p>
                   </div>
                 </div>
 
                 <div className="stat-card">
+                  <div className="stat-icon">🛒</div>
                   <div className="stat-content">
                     <h3>Total Orders</h3>
                     <div className="stat-number">{orders.length}</div>
@@ -361,10 +430,20 @@ function AdminDashboard() {
                 </div>
 
                 <div className="stat-card">
+                  <div className="stat-icon">💰</div>
                   <div className="stat-content">
                     <h3>Revenue</h3>
                     <div className="stat-number">₱{calculateRevenue().toLocaleString()}</div>
                     <p className="stat-description">Total sales</p>
+                  </div>
+                </div>
+
+                <div className="stat-card">
+                  <div className="stat-icon">⏳</div>
+                  <div className="stat-content">
+                    <h3>Pending Orders</h3>
+                    <div className="stat-number">{getOrderCountByStatus('pending')}</div>
+                    <p className="stat-description">Awaiting processing</p>
                   </div>
                 </div>
               </div>
@@ -384,7 +463,13 @@ function AdminDashboard() {
                 <div className="products-list">
                   {products.slice(0, 5).map(product => (
                     <div key={product._id} className="product-item">
-                      <img src={product.image} alt={product.name} className="product-thumb" />
+                      <div className="product-thumb">
+                        {product.image ? (
+                          <img src={product.image} alt={product.name} />
+                        ) : (
+                          <div className="image-placeholder">🧋</div>
+                        )}
+                      </div>
                       <div className="product-details">
                         <h4>{product.name}</h4>
                         <p>₱{product.price} • {product.category}</p>
@@ -402,7 +487,7 @@ function AdminDashboard() {
               <div className="page-header">
                 <div className="header-content">
                   <h1>Product Management</h1>
-                  <p>Manage your menu ({products.length} products)</p>
+                  <p>Manage your bubble tea menu ({products.length} products)</p>
                 </div>
                 <div className="header-actions">
                   <button className="btn-primary" onClick={handleAddProduct}>
@@ -417,8 +502,9 @@ function AdminDashboard() {
               <div className="products-grid">
                 {products.length === 0 ? (
                   <div className="empty-state">
+                    <div className="empty-icon">🧋</div>
                     <h3>No products yet</h3>
-                    <p>Click "Add Product" to create your first menu item!</p>
+                    <p>Start by adding your first bubble tea product!</p>
                     <button className="btn-primary" onClick={handleAddProduct}>
                       Add Your First Product
                     </button>
@@ -432,17 +518,23 @@ function AdminDashboard() {
                             src={product.image} 
                             alt={product.name}
                             className="product-img"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
                           />
-                        ) : (
-                          <div className="image-placeholder">🧋</div>
-                        )}
+                        ) : null}
+                        <div className="image-fallback">
+                          🧋
+                        </div>
+                        <div className="product-badge">{product.category}</div>
                       </div>
                       <div className="product-info">
                         <h3>{product.name}</h3>
                         <p className="product-description">{product.description}</p>
                         <div className="product-meta">
                           <span className="product-price">₱{product.price}</span>
-                          <span className="product-category">{product.category}</span>
+                          <span className="product-category-tag">{product.category}</span>
                         </div>
                       </div>
                       <div className="product-actions">
@@ -450,13 +542,13 @@ function AdminDashboard() {
                           className="btn-edit" 
                           onClick={() => handleEditProduct(product)}
                         >
-                          Edit
+                          ✏️ Edit
                         </button>
                         <button 
                           className="btn-delete"
                           onClick={() => deleteProduct(product._id)}
                         >
-                          Delete
+                          🗑️ Delete
                         </button>
                       </div>
                     </div>
@@ -472,7 +564,7 @@ function AdminDashboard() {
               <div className="page-header">
                 <div className="header-content">
                   <h1>Order Management</h1>
-                  <p>Customer orders</p>
+                  <p>Manage customer orders</p>
                 </div>
                 <div className="header-actions">
                   <button className="btn-primary" onClick={loadDashboardData}>
@@ -483,28 +575,51 @@ function AdminDashboard() {
 
               {orders.length === 0 ? (
                 <div className="empty-state">
+                  <div className="empty-icon">🛒</div>
                   <h3>No orders yet</h3>
                   <p>Orders will appear here when customers place them.</p>
                 </div>
               ) : (
-                <div className="orders-list">
-                  {orders.map(order => (
-                    <div key={order._id} className="order-card">
-                      <div className="order-header">
-                        <h4>Order #{order.orderNumber || order._id}</h4>
-                        <span className="order-date">{formatDate(order.orderDate)}</span>
-                      </div>
-                      <div className="order-details">
-                        <p><strong>Customer:</strong> {order.customer?.name || 'N/A'}</p>
-                        <p><strong>Total:</strong> ₱{order.totalAmount}</p>
-                        <p><strong>Status:</strong> 
-                          <span className={`status-badge ${order.status}`}>
+                <div className="orders-table">
+                  <div className="table-header">
+                    <div className="table-row">
+                      <div>Order #</div>
+                      <div>Customer</div>
+                      <div>Items</div>
+                      <div>Total</div>
+                      <div>Status</div>
+                      <div>Date</div>
+                    </div>
+                  </div>
+                  <div className="table-body">
+                    {orders.map(order => (
+                      <div key={order._id} className="table-row">
+                        <div className="order-number">
+                          <strong>#{order.orderNumber || order._id?.slice(-6)}</strong>
+                        </div>
+                        <div className="customer">
+                          {order.customer?.name || 'N/A'}
+                        </div>
+                        <div className="items">
+                          {order.items?.length || 0} items
+                        </div>
+                        <div className="total">
+                          ₱{order.totalAmount || 0}
+                        </div>
+                        <div className="status">
+                          <span 
+                            className="status-badge"
+                            style={{ backgroundColor: getStatusColor(order.status) }}
+                          >
                             {order.status}
                           </span>
-                        </p>
+                        </div>
+                        <div className="date">
+                          {formatDate(order.orderDate || order.createdAt)}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

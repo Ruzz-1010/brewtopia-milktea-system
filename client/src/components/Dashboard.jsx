@@ -109,10 +109,10 @@ function Dashboard() {
 
   // Loading component
   const LoadingSpinner = () => (
-    <div className="loading-dots">
-      <div className="dot"></div>
-      <div className="dot"></div>
-      <div className="dot"></div>
+    <div className="bubble-loader">
+      <div className="bubble"></div>
+      <div className="bubble"></div>
+      <div className="bubble"></div>
     </div>
   );
 
@@ -143,8 +143,11 @@ function Dashboard() {
       <header className="store-header">
         <div className="header-container">
           <div className="brand">
-            <h1>Brewtopia</h1>
-            <span className="tagline">Premium Milk Tea</span>
+            <div className="logo">🧋</div>
+            <div className="brand-text">
+              <h1>Brewtopia</h1>
+              <span className="tagline">Artisan Milk Tea</span>
+            </div>
           </div>
           
           <div className="header-controls">
@@ -153,7 +156,7 @@ function Dashboard() {
                 <span className="welcome">Welcome, {user.name}</span>
                 {user.role === 'admin' && (
                   <button onClick={switchToAdmin} className="admin-btn">
-                    Admin
+                    Admin Panel
                   </button>
                 )}
                 <button onClick={handleLogout} className="logout-btn">
@@ -187,14 +190,14 @@ function Dashboard() {
           {/* Products Section */}
           <section className="products-section">
             <div className="section-header">
-              <h2>Menu</h2>
-              <p>Choose from our selection of premium milk teas</p>
+              <h2>Our Signature Collection</h2>
+              <p>Handcrafted milk teas made with premium ingredients</p>
             </div>
 
             {loading ? (
               <div className="loading-state">
                 <LoadingSpinner />
-                <p>Loading menu...</p>
+                <p>Brewing our menu...</p>
               </div>
             ) : (
               <div className="products-grid">
@@ -202,6 +205,14 @@ function Dashboard() {
                   <div key={product.id} className="product-card">
                     <div className="product-image">
                       <span className="product-icon">{product.image}</span>
+                      <div className="product-overlay">
+                        <button 
+                          className="add-btn overlay-btn"
+                          onClick={() => handleAddToCart(product)}
+                        >
+                          Customize & Add
+                        </button>
+                      </div>
                     </div>
                     <div className="product-info">
                       <h3>{product.name}</h3>
@@ -226,19 +237,20 @@ function Dashboard() {
           <aside className="cart-sidebar">
             <div className="cart-container">
               <div className="cart-header">
-                <h3>Your Cart</h3>
+                <h3>Your Order</h3>
                 <div className="item-count">{cart.length} items</div>
               </div>
 
               {cartLoading ? (
                 <div className="cart-loading">
                   <LoadingSpinner />
+                  <p>Updating cart...</p>
                 </div>
               ) : cart.length === 0 ? (
                 <div className="empty-cart">
                   <div className="empty-icon">🧋</div>
                   <p>Your cart is empty</p>
-                  <span>Add items to get started</span>
+                  <span>Add some delicious milk tea!</span>
                 </div>
               ) : (
                 <div className="cart-content">
@@ -255,7 +267,7 @@ function Dashboard() {
                             <span>• {item.customizations.sugar} sugar</span>
                             <span>• {item.customizations.ice} ice</span>
                             {item.customizations.addons.length > 0 && (
-                              <span>• +{item.customizations.addons.length}</span>
+                              <span>• +{item.customizations.addons.length} add-ons</span>
                             )}
                           </div>
                         </div>
@@ -272,7 +284,7 @@ function Dashboard() {
                   
                   <div className="cart-footer">
                     <div className="total-section">
-                      <div className="total-label">Total</div>
+                      <div className="total-label">Total Amount</div>
                       <div className="total-amount">₱{getTotalPrice()}</div>
                     </div>
                     <button 

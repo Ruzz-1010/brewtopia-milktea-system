@@ -26,7 +26,8 @@ export default function AdminDashboard() {
     try {
       const [pro, ord, usr, stats] = await Promise.all([
         axios.get(`${API_URL}/api/admin/products`).then(r=>r.data).catch(()=>[]),
-        axios.get(`${API_URL}/api/orders`).then(r=>r.data).catch(()=>[]),
+        // CHANGE THIS LINE: Use /api/admin/orders instead of /api/orders
+        axios.get(`${API_URL}/api/admin/orders`).then(r=>r.data.orders || r.data).catch(()=>[]),
         axios.get(`${API_URL}/api/admin/users`).then(r=>r.data).catch(()=>[]),
         axios.get(`${API_URL}/api/admin/dashboard`).then(r=>r.data).catch(()=>({}))
       ]);

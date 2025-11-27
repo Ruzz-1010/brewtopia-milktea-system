@@ -313,7 +313,62 @@ app.get('/health', (req, res) => {
     message: 'Brewtopia API is healthy! 🚀'
   });
 });
+// ✅ ADD THESE ADMIN PRODUCT ROUTES TO YOUR server/index.js
 
+// Get all products for admin
+app.get('/api/admin/products', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const products = await Product.find();
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Create new product
+app.post('/api/admin/products', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const product = new Product(req.body);
+    await product.save();
+    res.status(201).json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update product
+app.put('/api/admin/products/:id', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Delete product
+app.delete('/api/admin/products/:id', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({ 

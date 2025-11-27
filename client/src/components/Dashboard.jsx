@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CustomizationModal from './CustomizationModal';
 import AuthModal from './AuthModal';
-import AdminDashboard from './Dashboard';
+import AdminDashboard from './AdminDashboard';
 import PaymentModal from './PaymentModal';
 import './Dashboard.css';
 
@@ -96,14 +96,12 @@ function Dashboard() {
       return;
     }
     
-    // Show payment modal instead of direct checkout
     setShowPaymentModal(true);
   };
 
   const handlePaymentSuccess = (paymentDetails) => {
     setCartLoading(true);
     setTimeout(() => {
-      // Here you would typically send the order to your backend
       console.log('Payment successful:', paymentDetails);
       alert(`Order placed successfully! Total: ₱${getTotalPrice()}\nPayment Method: ${paymentDetails.method}`);
       setCart([]);
@@ -167,45 +165,40 @@ function Dashboard() {
   }
 
   return (
-    <div className="modern-dashboard">
-      {/* Modern Header */}
-      <header className={`modern-header ${isScrolled ? 'scrolled' : ''}`}>
+    <div className="brewtopia-dashboard">
+      {/* Clean Header */}
+      <header className={`clean-header ${isScrolled ? 'scrolled' : ''}`}>
         <div className="header-content">
-          <div className="brand-section">
-            <div className="logo-circle">
-              <span className="logo-icon">🧋</span>
-            </div>
-            <div className="brand-info">
-              <h1 className="brand-name">Brewtopia</h1>
-              <p className="brand-tagline">Crafted with Love</p>
+          <div className="logo-section">
+            <div className="logo-icon">🧋</div>
+            <div className="brand-text">
+              <h1>Brewtopia</h1>
+              <span>Bubble Tea</span>
             </div>
           </div>
 
-          <div className="search-section">
-            <div className="search-container">
-              <span className="search-icon">🔍</span>
-              <input
-                type="text"
-                placeholder="Search your favorite drink..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
-              />
-            </div>
+          <div className="search-container">
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="Search drinks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
           </div>
 
-          <div className="actions-section">
+          <div className="header-actions">
             {user ? (
               <div className="user-menu">
-                <div className="user-greeting">
-                  <span className="user-avatar">👤</span>
+                <div className="user-info">
                   <span className="user-name">{user.name}</span>
+                  {user.role === 'admin' && (
+                    <button onClick={switchToAdmin} className="admin-btn">
+                      Admin
+                    </button>
+                  )}
                 </div>
-                {user.role === 'admin' && (
-                  <button onClick={switchToAdmin} className="admin-btn">
-                    Admin
-                  </button>
-                )}
                 <button onClick={handleLogout} className="logout-btn">
                   Logout
                 </button>
@@ -216,11 +209,12 @@ function Dashboard() {
               </button>
             )}
             
-            <div className="cart-indicator">
+            <div className="cart-button" onClick={() => cart.length > 0 && document.querySelector('.cart-panel').scrollIntoView({ behavior: 'smooth' })}>
               <span className="cart-icon">🛒</span>
               {cart.length > 0 && (
                 <span className="cart-count">{cart.length}</span>
               )}
+              <span className="cart-total">₱{getTotalPrice()}</span>
             </div>
           </div>
         </div>
@@ -230,16 +224,16 @@ function Dashboard() {
       <section className="hero-section">
         <div className="hero-content">
           <div className="hero-text">
-            <h2 className="hero-title">Discover Your Perfect Bubble Tea</h2>
-            <p className="hero-subtitle">Handcrafted beverages made with premium ingredients</p>
+            <h2>Crafted with Love</h2>
+            <p>Discover your perfect bubble tea experience</p>
             <div className="hero-stats">
               <div className="stat-item">
                 <span className="stat-number">50+</span>
-                <span className="stat-label">Drink Varieties</span>
+                <span className="stat-label">Varieties</span>
               </div>
               <div className="stat-item">
                 <span className="stat-number">15min</span>
-                <span className="stat-label">Ready Time</span>
+                <span className="stat-label">Ready</span>
               </div>
               <div className="stat-item">
                 <span className="stat-number">4.9★</span>
@@ -247,22 +241,14 @@ function Dashboard() {
               </div>
             </div>
           </div>
-          <div className="hero-visual">
-            <div className="floating-bubbles">
-              <div className="bubble"></div>
-              <div className="bubble"></div>
-              <div className="bubble"></div>
-              <div className="bubble"></div>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* Main Content */}
       <main className="main-content">
-        <div className="content-container">
-          {/* Modern Category Pills */}
-          <section className="category-section">
+        <div className="content-wrapper">
+          {/* Category Filter */}
+          <section className="category-filter">
             <div className="category-pills">
               {categories.map(category => (
                 <button
@@ -270,14 +256,6 @@ function Dashboard() {
                   className={`category-pill ${activeCategory === category ? 'active' : ''}`}
                   onClick={() => setActiveCategory(category)}
                 >
-                  <span className="category-icon">
-                    {category === 'All' && '✨'}
-                    {category === 'Milk Tea' && '🧋'}
-                    {category === 'Fruit Tea' && '🍓'}
-                    {category === 'Coffee' && '☕'}
-                    {category === 'Specialty' && '🌟'}
-                    {category === 'Seasonal' && '🎄'}
-                  </span>
                   {category}
                 </button>
               ))}
@@ -289,13 +267,13 @@ function Dashboard() {
             {loading ? (
               <div className="loading-container">
                 <LoadingSpinner />
-                <p className="loading-text">Preparing your drinks...</p>
+                <p>Preparing your drinks...</p>
               </div>
             ) : (
               <div className="products-grid">
                 {filteredProducts.map(product => (
                   <div key={product._id} className="product-card">
-                    <div className="card-image-container">
+                    <div className="card-image">
                       {product.image ? (
                         <img 
                           src={product.image} 
@@ -307,8 +285,8 @@ function Dashboard() {
                           }}
                         />
                       ) : null}
-                      <div className="image-placeholder">
-                        <span className="placeholder-icon">
+                      <div className="image-fallback">
+                        <span className="fallback-icon">
                           {product.category === 'Milk Tea' && '🧋'}
                           {product.category === 'Fruit Tea' && '🍓'}
                           {product.category === 'Coffee' && '☕'}
@@ -316,30 +294,19 @@ function Dashboard() {
                           {product.category === 'Seasonal' && '🎄'}
                         </span>
                       </div>
-                      <div className="card-overlay">
-                        <button 
-                          className="quick-add-btn"
-                          onClick={() => handleAddToCart(product)}
-                        >
-                          Customize
-                        </button>
-                      </div>
+                      <div className="card-badge">{product.category}</div>
                     </div>
                     
                     <div className="card-content">
-                      <div className="product-header">
-                        <h3 className="product-title">{product.name}</h3>
-                        <span className="product-price">₱{product.price}</span>
-                      </div>
+                      <h3 className="product-title">{product.name}</h3>
                       <p className="product-description">{product.description}</p>
                       <div className="card-footer">
-                        <span className="category-tag">{product.category}</span>
+                        <span className="product-price">₱{product.price}</span>
                         <button 
-                          className="add-btn"
+                          className="add-button"
                           onClick={() => handleAddToCart(product)}
                         >
-                          <span>Add</span>
-                          <span className="plus-icon">+</span>
+                          Add to Cart
                         </button>
                       </div>
                     </div>
@@ -349,67 +316,65 @@ function Dashboard() {
             )}
           </section>
 
-          {/* Modern Cart Sidebar */}
-          <aside className="cart-sidebar">
-            <div className="cart-container">
+          {/* Cart Section */}
+          <section className="cart-section">
+            <div className="cart-panel">
               <div className="cart-header">
-                <h3 className="cart-title">Your Order</h3>
-                <span className="cart-total">₱{getTotalPrice()}</span>
+                <h3>Your Order</h3>
+                <span className="item-count">{cart.length} items</span>
               </div>
 
               {cartLoading ? (
-                <div className="cart-loading">
+                <div className="loading-container">
                   <LoadingSpinner />
                 </div>
               ) : cart.length === 0 ? (
                 <div className="empty-cart">
                   <div className="empty-icon">🧋</div>
-                  <p className="empty-text">Your cart is empty</p>
-                  <p className="empty-subtext">Add some delicious drinks!</p>
+                  <p>Your cart is empty</p>
+                  <span className="empty-subtext">Add some drinks to get started</span>
                 </div>
               ) : (
                 <>
                   <div className="cart-items">
                     {cart.map((item, index) => (
                       <div key={index} className="cart-item">
-                        <div className="item-details">
-                          <div className="item-header">
-                            <h4 className="item-name">{item.name}</h4>
-                            <button 
-                              className="remove-btn"
-                              onClick={() => removeFromCart(index)}
-                            >
-                              ×
-                            </button>
+                        <div className="item-info">
+                          <h4 className="item-name">{item.name}</h4>
+                          <div className="item-details">
+                            <span>{item.customizations.size}</span>
+                            <span>{item.customizations.sugar}</span>
+                            <span>{item.customizations.ice}</span>
                           </div>
-                          <div className="item-customizations">
-                            <span className="custom-tag">{item.customizations.size}</span>
-                            <span className="custom-tag">{item.customizations.sugar}</span>
-                            <span className="custom-tag">{item.customizations.ice}</span>
-                          </div>
-                          <div className="item-price">₱{item.finalPrice || item.price}</div>
+                          <span className="item-price">₱{item.finalPrice || item.price}</span>
                         </div>
+                        <button 
+                          className="remove-btn"
+                          onClick={() => removeFromCart(index)}
+                        >
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
                   
-                  <div className="cart-footer">
-                    <div className="cart-summary">
-                      <span className="summary-label">Total</span>
-                      <span className="summary-price">₱{getTotalPrice()}</span>
+                  <div className="cart-summary">
+                    <div className="summary-row">
+                      <span>Total</span>
+                      <span className="total-price">₱{getTotalPrice()}</span>
                     </div>
                     <button 
                       className={`checkout-btn ${!user ? 'disabled' : ''}`}
                       onClick={handleCheckout}
                       disabled={!user}
                     >
-                      {user ? 'Checkout' : 'Sign In to Checkout'}
+                      {user ? 'Proceed to Payment' : 'Sign In to Checkout'}
                     </button>
                   </div>
                 </>
               )}
             </div>
-          </aside>
+          </section>
         </div>
       </main>
 
@@ -438,32 +403,21 @@ function Dashboard() {
         />
       )}
 
-      {/* Modern Footer */}
-      <footer className="modern-footer">
+      {/* Footer */}
+      <footer className="clean-footer">
         <div className="footer-content">
           <div className="footer-brand">
-            <div className="footer-logo">🧋</div>
-            <div className="footer-info">
+            <span className="footer-logo">🧋</span>
+            <div className="footer-text">
               <h4>Brewtopia</h4>
-              <p>Crafting happiness in every cup</p>
+              <p>Bubble Tea Paradise</p>
             </div>
           </div>
           <div className="footer-links">
-            <div className="link-group">
-              <h5>Visit Us</h5>
-              <p>123 Bubble Tea Street</p>
-              <p>Manila, Philippines</p>
-            </div>
-            <div className="link-group">
-              <h5>Hours</h5>
-              <p>Mon-Sun: 10AM - 10PM</p>
-              <p>Delivery Available</p>
-            </div>
-            <div className="link-group">
-              <h5>Contact</h5>
-              <p>(02) 8123-4567</p>
-              <p>hello@brewtopia.com</p>
-            </div>
+            <a href="#menu">Menu</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+            <a href="#privacy">Privacy</a>
           </div>
         </div>
         <div className="footer-bottom">

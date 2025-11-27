@@ -1,3 +1,4 @@
+// AdminDashboard.jsx - Modern Redesign
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './AdminDashboard.css';
@@ -39,11 +40,9 @@ function AdminDashboard() {
     try {
       const [productsRes, ordersRes, usersRes] = await Promise.all([
         axios.get(`${API_URL}/api/products`),
-        // Try multiple order endpoints
         axios.get(`${API_URL}/api/orders`).catch(() => 
           axios.get(`${API_URL}/api/admin/orders`).catch(() => ({ data: [] }))
         ),
-        // Try to get real users from database
         axios.get(`${API_URL}/api/users`).catch(() => 
           axios.get(`${API_URL}/api/admin/users`).catch(() => ({ data: [] }))
         )
@@ -51,7 +50,6 @@ function AdminDashboard() {
       
       setProducts(productsRes.data);
       
-      // Handle orders response
       const ordersData = ordersRes.data;
       if (Array.isArray(ordersData)) {
         setOrders(ordersData);
@@ -61,7 +59,6 @@ function AdminDashboard() {
         setOrders([]);
       }
       
-      // Handle users response
       const usersData = usersRes.data;
       if (Array.isArray(usersData)) {
         setUsers(usersData);
@@ -80,13 +77,11 @@ function AdminDashboard() {
   // ORDER MANAGEMENT
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      // Try admin endpoint first
       try {
         await axios.put(`${API_URL}/api/admin/orders/${orderId}/status`, {
           status: newStatus
         });
       } catch (adminError) {
-        // Fallback to regular endpoint
         await axios.put(`${API_URL}/api/orders/${orderId}/status`, {
           status: newStatus
         });
@@ -212,14 +207,14 @@ function AdminDashboard() {
   // UTILITY FUNCTIONS
   const getStatusColor = (status) => {
     const colors = {
-      pending: '#b18f6a',
-      confirmed: '#a67b5b',
-      preparing: '#8a624a',
-      ready: '#765640',
-      completed: '#5d4037',
-      cancelled: '#ccae88'
+      pending: '#f59e0b',
+      confirmed: '#3b82f6',
+      preparing: '#8b5cf6',
+      ready: '#10b981',
+      completed: '#059669',
+      cancelled: '#ef4444'
     };
-    return colors[status] || '#95a5a6';
+    return colors[status] || '#64748b';
   };
 
   const formatDate = (dateString) => {
@@ -269,8 +264,7 @@ function AdminDashboard() {
           <span>☰</span>
         </button>
         <div className="mobile-title">
-          <h1>🧋 Brewtopia</h1>
-          <span>Admin Panel</span>
+          <h1>🧋 Brewtopia Admin</h1>
         </div>
         <button className="refresh-btn" onClick={loadDashboardData}>
           🔄
@@ -321,7 +315,6 @@ function AdminDashboard() {
                 />
               </div>
 
-              {/* Image Preview */}
               {productForm.image && (
                 <div className="image-preview">
                   <label>Image Preview:</label>
@@ -332,12 +325,8 @@ function AdminDashboard() {
                       className="preview-image"
                       onError={(e) => {
                         e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
                       }}
                     />
-                    <div className="preview-fallback" style={{display: 'none'}}>
-                      ❌ Invalid Image URL
-                    </div>
                   </div>
                 </div>
               )}
@@ -452,7 +441,7 @@ function AdminDashboard() {
             <div className="dashboard-content">
               <div className="page-header">
                 <h1>Dashboard Overview</h1>
-                <p>Business management panel</p>
+                <p>Welcome to your business management panel</p>
               </div>
 
               {/* Stats Cards */}
@@ -462,7 +451,7 @@ function AdminDashboard() {
                   <div className="stat-content">
                     <h3>Total Products</h3>
                     <div className="stat-number">{products.length}</div>
-                    <p className="stat-description">Menu items</p>
+                    <p className="stat-description">Active menu items</p>
                   </div>
                 </div>
 
@@ -471,7 +460,7 @@ function AdminDashboard() {
                   <div className="stat-content">
                     <h3>Total Orders</h3>
                     <div className="stat-number">{orders.length}</div>
-                    <p className="stat-description">All orders</p>
+                    <p className="stat-description">All time orders</p>
                   </div>
                 </div>
 
@@ -508,7 +497,9 @@ function AdminDashboard() {
 
                 {orders.length === 0 ? (
                   <div className="empty-state">
-                    <p>No orders yet. Orders will appear here when customers place them.</p>
+                    <div className="empty-icon">🛒</div>
+                    <h3>No orders yet</h3>
+                    <p>Orders will appear here when customers place them.</p>
                   </div>
                 ) : (
                   <div className="orders-list">
@@ -557,10 +548,12 @@ function AdminDashboard() {
                 </div>
                 <div className="header-actions">
                   <button className="btn-primary" onClick={handleAddProduct}>
-                    ➕ Add Product
+                    <span>➕</span>
+                    Add Product
                   </button>
                   <button className="btn-secondary" onClick={loadDashboardData}>
-                    🔄 Refresh
+                    <span>🔄</span>
+                    Refresh
                   </button>
                 </div>
               </div>
@@ -590,7 +583,7 @@ function AdminDashboard() {
                             }}
                           />
                         ) : null}
-                        <div className="image-fallback">
+                        <div className="image-fallback" style={{display: product.image ? 'none' : 'flex'}}>
                           🧋
                         </div>
                         <div className="product-badge">{product.category}</div>
@@ -634,7 +627,8 @@ function AdminDashboard() {
                 </div>
                 <div className="header-actions">
                   <button className="btn-primary" onClick={loadDashboardData}>
-                    🔄 Refresh
+                    <span>🔄</span>
+                    Refresh
                   </button>
                 </div>
               </div>
@@ -655,7 +649,6 @@ function AdminDashboard() {
                       <div>Total</div>
                       <div>Status</div>
                       <div>Date</div>
-                      <div>Actions</div>
                     </div>
                   </div>
                   <div className="table-body">
@@ -692,9 +685,6 @@ function AdminDashboard() {
                         <div className="date">
                           {formatDate(order.orderDate)}
                         </div>
-                        <div className="actions">
-                          <button className="btn-action view">👁️</button>
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -713,7 +703,8 @@ function AdminDashboard() {
                 </div>
                 <div className="header-actions">
                   <button className="btn-primary" onClick={loadDashboardData}>
-                    🔄 Refresh
+                    <span>🔄</span>
+                    Refresh
                   </button>
                 </div>
               </div>
@@ -723,13 +714,6 @@ function AdminDashboard() {
                   <div className="empty-icon">👥</div>
                   <h3>No users found</h3>
                   <p>Users will appear here when they register.</p>
-                  <div className="debug-info">
-                    <p><strong>Debug Info:</strong> Trying to fetch from:</p>
-                    <ul>
-                      <li><code>{API_URL}/api/users</code></li>
-                      <li><code>{API_URL}/api/admin/users</code></li>
-                    </ul>
-                  </div>
                 </div>
               ) : (
                 <div className="users-table">
@@ -772,7 +756,8 @@ function AdminDashboard() {
                           <button 
                             className="btn-delete"
                             onClick={() => deleteUser(user._id)}
-                            disabled={user.role === 'admin'} // Prevent deleting admin accounts
+                            disabled={user.role === 'admin'}
+                            style={{opacity: user.role === 'admin' ? 0.5 : 1}}
                           >
                             🗑️
                           </button>

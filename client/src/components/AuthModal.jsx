@@ -4,8 +4,8 @@ import './AuthModal.css';
 
 const API_URL = 'https://brewtopia-backend.onrender.com';
 
-function AuthModal({ onClose, onLogin, isAdminSetup = false }) {
-  const [isLogin, setIsLogin] = useState(!isAdminSetup);
+function AuthModal({ onClose, onLogin }) {
+  const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,39 +31,35 @@ function AuthModal({ onClose, onLogin, isAdminSetup = false }) {
     try {
       let endpoint, payload;
 
-      if (isAdminSetup) {
-        // Admin setup
-        endpoint = '/setup-admin';
-        payload = {
-          name: formData.name,
-          email: formData.email,
-          password: formData.password
-        };
-      } else if (isLogin) {
-        // Regular login
+      if (isLogin) {
+        // Login
         endpoint = '/login';
         payload = {
           email: formData.email,
           password: formData.password
         };
       } else {
-        // Customer registration
+        // Register
         endpoint = '/register';
-        payload = formData;
+        payload = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+          address: formData.address
+        };
       }
 
       const response = await axios.post(`${API_URL}/api/auth${endpoint}`, payload);
       
-      // Save token to localStorage
+      // Save to localStorage
       localStorage.setItem('brewtopia_token', response.data.token);
       localStorage.setItem('brewtopia_user', JSON.stringify(response.data.user));
       
       onLogin(response.data.user);
       onClose();
       
-      if (isAdminSetup) {
-        alert('✅ Admin account created successfully!');
-      }
+      alert(isLogin ? 'Login successful!' : 'Registration successful!');
       
     } catch (error) {
       setError(error.response?.data?.message || 'Something went wrong');
@@ -76,16 +72,14 @@ function AuthModal({ onClose, onLogin, isAdminSetup = false }) {
     <div className="auth-modal-overlay">
       <div className="auth-modal-content">
         <div className="auth-modal-header">
-          <h2>
-            {isAdminSetup ? 'Setup Admin Account' : (isLogin ? 'Login' : 'Register')}
-          </h2>
+          <h2>{isLogin ? 'Login' : 'Register'}</h2>
           <button className="close-btn" onClick={onClose}>✕</button>
         </div>
 
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
-          {(!isLogin || isAdminSetup) && (
+          {!isLogin && (
             <input
               type="text"
               name="name"
@@ -115,7 +109,7 @@ function AuthModal({ onClose, onLogin, isAdminSetup = false }) {
             minLength="6"
           />
 
-          {!isLogin && !isAdminSetup && (
+          {!isLogin && (
             <>
               <input
                 type="tel"
@@ -139,24 +133,20 @@ function AuthModal({ onClose, onLogin, isAdminSetup = false }) {
             className="auth-submit-btn"
             disabled={loading}
           >
-            {loading ? 'Please wait...' : (
-              isAdminSetup ? 'Create Admin Account' : (isLogin ? 'Login' : 'Register')
-            )}
+            {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Register')}
           </button>
         </form>
 
-        {!isAdminSetup && (
-          <div className="auth-switch">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button 
-              className="switch-btn"
-              onClick={() => setIsLogin(!isLogin)}
-              type="button"
-            >
-              {isLogin ? 'Register' : 'Login'}
-            </button>
-          </div>
-        )}
+        <div className="auth-switch">
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <button 
+            className="switch-btn"
+            onClick={() => setIsLogin(!isLogin)}
+            type="button"
+          >
+            {isLogin ? 'Register' : 'Login'}
+          </button>
+        </div>
       </div>
     </div>
   );

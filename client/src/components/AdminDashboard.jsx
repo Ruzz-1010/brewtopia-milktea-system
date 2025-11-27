@@ -8,6 +8,7 @@ function AdminDashboard() {
   const [stats, setStats] = useState({});
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
+  const [users, setUsers] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,16 +25,6 @@ function AdminDashboard() {
     category: 'Milk Tea'
   });
 
-  // Sample images for milk tea products
-  const sampleImages = [
-    'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1525385133512-2f3bdd24ac30?w=400&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=300&fit=crop',
-    'https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=400&h=300&fit=crop'
-  ];
-
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -46,13 +37,29 @@ function AdminDashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [productsRes, ordersRes] = await Promise.all([
+      const [productsRes, ordersRes, usersRes] = await Promise.all([
         axios.get(`${API_URL}/api/products`),
-        axios.get(`${API_URL}/api/orders`).catch(() => ({ data: [] }))
+        // Try different order endpoints
+        axios.get(`${API_URL}/api/orders`).catch(() => 
+          axios.get(`${API_URL}/api/admin/orders`).catch(() => ({ data: [] }))
+        ),
+        // Try to get users
+        axios.get(`${API_URL}/api/admin/users`).catch(() => ({ data: [] }))
       ]);
       
       setProducts(productsRes.data);
-      setOrders(ordersRes.data.orders || ordersRes.data || []);
+      
+      // Handle orders response - check different response structures
+      const ordersData = ordersRes.data;
+      if (Array.isArray(ordersData)) {
+        setOrders(ordersData);
+      } else if (ordersData.orders) {
+        setOrders(ordersData.orders);
+      } else {
+        setOrders([]);
+      }
+      
+      setUsers(usersRes.data || []);
       
     } catch (error) {
       console.error('Error loading data:', error);
@@ -62,13 +69,27 @@ function AdminDashboard() {
     }
   };
 
-  // PRODUCT MANAGEMENT - FIXED
+  // ORDER MANAGEMENT
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await axios.put(`${API_URL}/api/admin/orders/${orderId}/status`, {
+        status: newStatus
+      });
+      showNotification('Order status updated!');
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error updating order:', error);
+      showNotification('Error updating order status');
+    }
+  };
+
+  // PRODUCT MANAGEMENT
   const handleAddProduct = () => {
     setEditingProduct(null);
     setProductForm({
       name: '',
       price: '',
-      image: sampleImages[0],
+      image: '',
       description: '',
       category: 'Milk Tea'
     });
@@ -115,20 +136,10 @@ function AdminDashboard() {
       };
 
       if (editingProduct) {
-        // Try admin endpoint first, fallback to regular endpoint
-        try {
-          await axios.put(`${API_URL}/api/admin/products/${editingProduct._id}`, productData);
-        } catch (adminError) {
-          await axios.put(`${API_URL}/api/products/${editingProduct._id}`, productData);
-        }
+        await axios.put(`${API_URL}/api/admin/products/${editingProduct._id}`, productData);
         showNotification('Product updated successfully!');
       } else {
-        // Try admin endpoint first, fallback to regular endpoint
-        try {
-          await axios.post(`${API_URL}/api/admin/products`, productData);
-        } catch (adminError) {
-          await axios.post(`${API_URL}/api/products`, productData);
-        }
+        await axios.post(`${API_URL}/api/admin/products`, productData);
         showNotification('Product added successfully!');
       }
       
@@ -145,12 +156,7 @@ function AdminDashboard() {
   const deleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        // Try admin endpoint first, fallback to regular endpoint
-        try {
-          await axios.delete(`${API_URL}/api/admin/products/${productId}`);
-        } catch (adminError) {
-          await axios.delete(`${API_URL}/api/products/${productId}`);
-        }
+        await axios.delete(`${API_URL}/api/admin/products/${productId}`);
         showNotification('Product deleted successfully!');
         loadDashboardData();
       } catch (error) {
@@ -160,8 +166,31 @@ function AdminDashboard() {
     }
   };
 
-  const handleImageSelect = (imageUrl) => {
-    setProductForm({...productForm, image: imageUrl});
+  // USER MANAGEMENT
+  const updateUserRole = async (userId, newRole) => {
+    try {
+      await axios.put(`${API_URL}/api/admin/users/${userId}/role`, {
+        role: newRole
+      });
+      showNotification('User role updated!');
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      showNotification('Error updating user role');
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      try {
+        await axios.delete(`${API_URL}/api/admin/users/${userId}`);
+        showNotification('User deleted successfully!');
+        loadDashboardData();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        showNotification('Error deleting user');
+      }
+    }
   };
 
   // UTILITY FUNCTIONS
@@ -178,6 +207,7 @@ function AdminDashboard() {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-PH', {
       year: 'numeric',
       month: 'short',
@@ -195,6 +225,14 @@ function AdminDashboard() {
 
   const getOrderCountByStatus = (status) => {
     return orders.filter(order => order.status === status).length;
+  };
+
+  const getTotalCustomers = () => {
+    return users.filter(user => user.role === 'customer').length;
+  };
+
+  const getTotalAdmins = () => {
+    return users.filter(user => user.role === 'admin').length;
   };
 
   return (
@@ -287,23 +325,6 @@ function AdminDashboard() {
                   </div>
                 </div>
               )}
-
-              {/* Quick Image Selection */}
-              <div className="form-group">
-                <label>Quick Image Selection:</label>
-                <div className="image-options">
-                  {sampleImages.map((imageUrl, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      className={`image-option ${productForm.image === imageUrl ? 'selected' : ''}`}
-                      onClick={() => handleImageSelect(imageUrl)}
-                    >
-                      <img src={imageUrl} alt={`Option ${index + 1}`} />
-                    </button>
-                  ))}
-                </div>
-              </div>
               
               <div className="form-group">
                 <label>Category *</label>
@@ -385,6 +406,15 @@ function AdminDashboard() {
               <span className="nav-text">Products</span>
               <span className="nav-badge">{products.length}</span>
             </button>
+
+            <button 
+              className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
+              onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}
+            >
+              <span className="nav-icon">👥</span>
+              <span className="nav-text">Users</span>
+              <span className="nav-badge">{users.length}</span>
+            </button>
           </nav>
         </aside>
 
@@ -439,44 +469,64 @@ function AdminDashboard() {
                 </div>
 
                 <div className="stat-card">
-                  <div className="stat-icon">⏳</div>
+                  <div className="stat-icon">👥</div>
                   <div className="stat-content">
-                    <h3>Pending Orders</h3>
-                    <div className="stat-number">{getOrderCountByStatus('pending')}</div>
-                    <p className="stat-description">Awaiting processing</p>
+                    <h3>Total Users</h3>
+                    <div className="stat-number">{users.length}</div>
+                    <p className="stat-description">{getTotalCustomers()} customers, {getTotalAdmins()} admins</p>
                   </div>
                 </div>
               </div>
 
-              {/* Recent Products */}
+              {/* Recent Orders */}
               <div className="activity-section">
                 <div className="section-header">
-                  <h2>Recent Products</h2>
+                  <h2>Recent Orders</h2>
                   <button 
                     className="view-all-btn"
-                    onClick={() => setActiveTab('products')}
+                    onClick={() => setActiveTab('orders')}
                   >
-                    View All Products
+                    View All Orders
                   </button>
                 </div>
 
-                <div className="products-list">
-                  {products.slice(0, 5).map(product => (
-                    <div key={product._id} className="product-item">
-                      <div className="product-thumb">
-                        {product.image ? (
-                          <img src={product.image} alt={product.name} />
-                        ) : (
-                          <div className="image-placeholder">🧋</div>
-                        )}
+                {orders.length === 0 ? (
+                  <div className="empty-state">
+                    <p>No orders yet. Orders will appear here when customers place them.</p>
+                  </div>
+                ) : (
+                  <div className="orders-list">
+                    {orders.slice(0, 5).map(order => (
+                      <div key={order._id} className="order-item">
+                        <div className="order-info">
+                          <div className="order-main">
+                            <h4>Order #{order.orderNumber || order._id?.slice(-6)}</h4>
+                            <span className="customer">{order.customer?.name || 'N/A'}</span>
+                          </div>
+                          <div className="order-details">
+                            <span className="amount">₱{order.totalAmount || 0}</span>
+                            <span className="date">{formatDate(order.orderDate)}</span>
+                          </div>
+                        </div>
+                        <div className="order-actions">
+                          <select 
+                            value={order.status || 'pending'}
+                            onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                            className="status-select"
+                            style={{ borderColor: getStatusColor(order.status) }}
+                          >
+                            <option value="pending">⏳ Pending</option>
+                            <option value="confirmed">✅ Confirmed</option>
+                            <option value="preparing">👨‍🍳 Preparing</option>
+                            <option value="ready">🥤 Ready</option>
+                            <option value="completed">📦 Completed</option>
+                            <option value="cancelled">❌ Cancelled</option>
+                          </select>
+                        </div>
                       </div>
-                      <div className="product-details">
-                        <h4>{product.name}</h4>
-                        <p>₱{product.price} • {product.category}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -564,7 +614,7 @@ function AdminDashboard() {
               <div className="page-header">
                 <div className="header-content">
                   <h1>Order Management</h1>
-                  <p>Manage customer orders</p>
+                  <p>Manage customer orders ({orders.length} total)</p>
                 </div>
                 <div className="header-actions">
                   <button className="btn-primary" onClick={loadDashboardData}>
@@ -589,6 +639,7 @@ function AdminDashboard() {
                       <div>Total</div>
                       <div>Status</div>
                       <div>Date</div>
+                      <div>Actions</div>
                     </div>
                   </div>
                   <div className="table-body">
@@ -598,7 +649,8 @@ function AdminDashboard() {
                           <strong>#{order.orderNumber || order._id?.slice(-6)}</strong>
                         </div>
                         <div className="customer">
-                          {order.customer?.name || 'N/A'}
+                          <div className="customer-name">{order.customer?.name || 'N/A'}</div>
+                          <div className="customer-contact">{order.customer?.email || order.customer?.phone || ''}</div>
                         </div>
                         <div className="items">
                           {order.items?.length || 0} items
@@ -607,15 +659,100 @@ function AdminDashboard() {
                           ₱{order.totalAmount || 0}
                         </div>
                         <div className="status">
-                          <span 
-                            className="status-badge"
-                            style={{ backgroundColor: getStatusColor(order.status) }}
+                          <select 
+                            value={order.status || 'pending'}
+                            onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                            className="status-select"
+                            style={{ borderColor: getStatusColor(order.status) }}
                           >
-                            {order.status}
-                          </span>
+                            <option value="pending">⏳ Pending</option>
+                            <option value="confirmed">✅ Confirmed</option>
+                            <option value="preparing">👨‍🍳 Preparing</option>
+                            <option value="ready">🥤 Ready</option>
+                            <option value="completed">📦 Completed</option>
+                            <option value="cancelled">❌ Cancelled</option>
+                          </select>
                         </div>
                         <div className="date">
-                          {formatDate(order.orderDate || order.createdAt)}
+                          {formatDate(order.orderDate)}
+                        </div>
+                        <div className="actions">
+                          <button className="btn-action view">👁️</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Users Tab */}
+          {activeTab === 'users' && (
+            <div className="users-content">
+              <div className="page-header">
+                <div className="header-content">
+                  <h1>User Management</h1>
+                  <p>Manage system users ({users.length} total)</p>
+                </div>
+                <div className="header-actions">
+                  <button className="btn-primary" onClick={loadDashboardData}>
+                    🔄 Refresh
+                  </button>
+                </div>
+              </div>
+
+              {users.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">👥</div>
+                  <h3>No users found</h3>
+                  <p>Users will appear here when they register.</p>
+                </div>
+              ) : (
+                <div className="users-table">
+                  <div className="table-header">
+                    <div className="table-row">
+                      <div>Name</div>
+                      <div>Email</div>
+                      <div>Phone</div>
+                      <div>Role</div>
+                      <div>Joined</div>
+                      <div>Actions</div>
+                    </div>
+                  </div>
+                  <div className="table-body">
+                    {users.map(user => (
+                      <div key={user._id} className="table-row">
+                        <div className="user-name">
+                          <strong>{user.name}</strong>
+                        </div>
+                        <div className="user-email">
+                          {user.email}
+                        </div>
+                        <div className="user-phone">
+                          {user.phone || 'N/A'}
+                        </div>
+                        <div className="user-role">
+                          <select 
+                            value={user.role}
+                            onChange={(e) => updateUserRole(user._id, e.target.value)}
+                            className="role-select"
+                          >
+                            <option value="customer">Customer</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                        <div className="user-joined">
+                          {formatDate(user.createdAt)}
+                        </div>
+                        <div className="actions">
+                          <button 
+                            className="btn-delete"
+                            onClick={() => deleteUser(user._id)}
+                            disabled={user.role === 'admin'} // Prevent deleting admin accounts
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     ))}

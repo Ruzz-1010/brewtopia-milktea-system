@@ -11,6 +11,17 @@ function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Form states
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    price: '',
+    image: '',
+    description: '',
+    category: 'Milk Tea'
+  });
 
   useEffect(() => {
     loadDashboardData();
@@ -35,6 +46,7 @@ function AdminDashboard() {
     }
   };
 
+  // ORDER MANAGEMENT
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       await axios.put(`${API_URL}/api/admin/orders/${orderId}/status`, {
@@ -46,14 +58,84 @@ function AdminDashboard() {
     }
   };
 
+  // PRODUCT MANAGEMENT
+  const handleAddProduct = () => {
+    setEditingProduct(null);
+    setProductForm({
+      name: '',
+      price: '',
+      image: '🧋',
+      description: '',
+      category: 'Milk Tea'
+    });
+    setShowProductForm(true);
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setProductForm({
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      description: product.description,
+      category: product.category
+    });
+    setShowProductForm(true);
+  };
+
+  const handleSaveProduct = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingProduct) {
+        // Update existing product
+        await axios.put(`${API_URL}/api/admin/products/${editingProduct._id}`, productForm);
+      } else {
+        // Add new product
+        await axios.post(`${API_URL}/api/admin/products`, {
+          ...productForm,
+          customizations: {
+            sizes: [
+              { name: "Regular", price: 0 },
+              { name: "Large", price: 20 },
+              { name: "X-Large", price: 30 }
+            ],
+            sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+            iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+            addons: [
+              { name: "Pearls", price: 15 },
+              { name: "Pudding", price: 20 },
+              { name: "Whip Cream", price: 25 }
+            ]
+          }
+        });
+      }
+      setShowProductForm(false);
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error saving product:', error);
+    }
+  };
+
+  const deleteProduct = async (productId) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        await axios.delete(`${API_URL}/api/admin/products/${productId}`);
+        loadDashboardData();
+      } catch (error) {
+        console.error('Error deleting product:', error);
+      }
+    }
+  };
+
+  // UTILITY FUNCTIONS
   const getStatusColor = (status) => {
     const colors = {
-      pending: '#f39c12',
-      confirmed: '#3498db',
-      preparing: '#9b59b6',
-      ready: '#2ecc71',
-      completed: '#27ae60',
-      cancelled: '#e74c3c'
+      pending: '#b18f6a',
+      confirmed: '#a67b5b',
+      preparing: '#8a624a',
+      ready: '#765640',
+      completed: '#5d4037',
+      cancelled: '#ccae88'
     };
     return colors[status] || '#95a5a6';
   };
@@ -74,6 +156,10 @@ function AdminDashboard() {
       .reduce((total, order) => total + (order.totalAmount || 0), 0);
   };
 
+  const getOrderCountByStatus = (status) => {
+    return orders.filter(order => order.status === status).length;
+  };
+
   return (
     <div className="admin-dashboard">
       {/* Mobile Header */}
@@ -92,6 +178,75 @@ function AdminDashboard() {
           🔄
         </button>
       </header>
+
+      {/* Product Form Modal */}
+      {showProductForm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+              <button className="close-btn" onClick={() => setShowProductForm(false)}>✕</button>
+            </div>
+            <form onSubmit={handleSaveProduct} className="product-form">
+              <div className="form-group">
+                <label>Product Name</label>
+                <input
+                  type="text"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm({...productForm, name: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Price</label>
+                <input
+                  type="number"
+                  value={productForm.price}
+                  onChange={(e) => setProductForm({...productForm, price: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Emoji/Image</label>
+                <input
+                  type="text"
+                  value={productForm.image}
+                  onChange={(e) => setProductForm({...productForm, image: e.target.value})}
+                  placeholder="🧋"
+                />
+              </div>
+              <div className="form-group">
+                <label>Category</label>
+                <select
+                  value={productForm.category}
+                  onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                >
+                  <option value="Milk Tea">Milk Tea</option>
+                  <option value="Fruit Tea">Fruit Tea</option>
+                  <option value="Coffee">Coffee</option>
+                  <option value="Specialty">Specialty</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea
+                  value={productForm.description}
+                  onChange={(e) => setProductForm({...productForm, description: e.target.value})}
+                  rows="3"
+                />
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowProductForm(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-save">
+                  {editingProduct ? 'Update Product' : 'Add Product'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="admin-container">
         {/* Sidebar */}
@@ -121,8 +276,8 @@ function AdminDashboard() {
             >
               <span className="nav-icon">🛒</span>
               <span className="nav-text">Orders</span>
-              {stats.pendingOrders > 0 && (
-                <span className="nav-badge">{stats.pendingOrders}</span>
+              {getOrderCountByStatus('pending') > 0 && (
+                <span className="nav-badge">{getOrderCountByStatus('pending')}</span>
               )}
             </button>
 
@@ -204,7 +359,7 @@ function AdminDashboard() {
                   </div>
                   <div className="stat-content">
                     <h3>Pending Orders</h3>
-                    <div className="stat-number">{stats.pendingOrders || 0}</div>
+                    <div className="stat-number">{getOrderCountByStatus('pending')}</div>
                     <p className="stat-description">Awaiting processing</p>
                   </div>
                 </div>
@@ -330,7 +485,6 @@ function AdminDashboard() {
                       </div>
                       <div className="actions">
                         <button className="btn-action view">👁️</button>
-                        <button className="btn-action edit">✏️</button>
                       </div>
                     </div>
                   ))}
@@ -348,7 +502,7 @@ function AdminDashboard() {
                   <p>Manage your milk tea menu</p>
                 </div>
                 <div className="header-actions">
-                  <button className="btn-primary">
+                  <button className="btn-primary" onClick={handleAddProduct}>
                     ➕ Add Product
                   </button>
                 </div>
@@ -356,7 +510,7 @@ function AdminDashboard() {
 
               <div className="products-grid">
                 {products.map(product => (
-                  <div key={product.id} className="product-card">
+                  <div key={product.id || product._id} className="product-card">
                     <div className="product-image">
                       <span className="product-emoji">{product.image}</span>
                     </div>
@@ -369,16 +523,26 @@ function AdminDashboard() {
                       </div>
                       <div className="customization-info">
                         <div className="customization-item">
-                          <span>Sizes: {product.customizations?.sizes?.length || 0}</span>
+                          <span>Sizes: {product.customizations?.sizes?.length || 3}</span>
                         </div>
                         <div className="customization-item">
-                          <span>Add-ons: {product.customizations?.addons?.length || 0}</span>
+                          <span>Add-ons: {product.customizations?.addons?.length || 3}</span>
                         </div>
                       </div>
                     </div>
                     <div className="product-actions">
-                      <button className="btn-secondary">✏️ Edit</button>
-                      <button className="btn-status active">✅ Active</button>
+                      <button 
+                        className="btn-secondary" 
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button 
+                        className="btn-danger"
+                        onClick={() => deleteProduct(product._id || product.id)}
+                      >
+                        🗑️ Delete
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -401,7 +565,7 @@ function AdminDashboard() {
                     <div className="stat-item">
                       <span className="stat-label">Completed Orders</span>
                       <span className="stat-value">
-                        {orders.filter(o => o.status === 'completed').length}
+                        {getOrderCountByStatus('completed')}
                       </span>
                     </div>
                     <div className="stat-item">
@@ -411,28 +575,32 @@ function AdminDashboard() {
                       </span>
                     </div>
                     <div className="stat-item">
-                      <span className="stat-label">Popular Product</span>
+                      <span className="stat-label">Total Products</span>
                       <span className="stat-value">
-                        {products[0]?.name || 'Classic Milk Tea'}
+                        {products.length}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="analytics-card">
-                  <h3>📈 Quick Insights</h3>
-                  <div className="insights-list">
-                    <div className="insight-item positive">
-                      <span>📈 Sales trending up this week</span>
+                  <h3>📈 Order Status Distribution</h3>
+                  <div className="status-distribution">
+                    <div className="status-item">
+                      <span className="status-label">Pending</span>
+                      <span className="status-count">{getOrderCountByStatus('pending')}</span>
                     </div>
-                    <div className="insight-item positive">
-                      <span>👍 Customer satisfaction high</span>
+                    <div className="status-item">
+                      <span className="status-label">Preparing</span>
+                      <span className="status-count">{getOrderCountByStatus('preparing')}</span>
                     </div>
-                    <div className="insight-item neutral">
-                      <span>⚡ Fast order processing</span>
+                    <div className="status-item">
+                      <span className="status-label">Ready</span>
+                      <span className="status-count">{getOrderCountByStatus('ready')}</span>
                     </div>
-                    <div className="insight-item negative">
-                      <span>⚠️ Monitor inventory levels</span>
+                    <div className="status-item">
+                      <span className="status-label">Completed</span>
+                      <span className="status-count">{getOrderCountByStatus('completed')}</span>
                     </div>
                   </div>
                 </div>
@@ -452,7 +620,10 @@ function AdminDashboard() {
                           {formatDate(order.orderDate)}
                         </span>
                       </div>
-                      <div className={`activity-status ${order.status}`}>
+                      <div 
+                        className="activity-status"
+                        style={{ backgroundColor: getStatusColor(order.status) }}
+                      >
                         {order.status}
                       </div>
                     </div>

@@ -23,6 +23,16 @@ function AdminDashboard() {
     category: 'Milk Tea'
   });
 
+  // Sample image URLs for quick selection
+  const sampleImages = [
+    'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=300&fit=crop', // Milk tea
+    'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=300&fit=crop', // Bubble tea
+    'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&h=300&fit=crop', // Matcha
+    'https://images.unsplash.com/photo-1525385133512-2f3bdd24ac30?w=400&h=300&fit=crop', // Taro
+    'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=300&fit=crop', // Wintermelon
+    'https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=400&h=300&fit=crop'  // Fruit tea
+  ];
+
   useEffect(() => {
     loadDashboardData();
   }, []);
@@ -64,7 +74,7 @@ function AdminDashboard() {
     setProductForm({
       name: '',
       price: '',
-      image: '🧋',
+      image: sampleImages[0], // Default to first sample image
       description: '',
       category: 'Milk Tea'
     });
@@ -125,6 +135,10 @@ function AdminDashboard() {
         console.error('Error deleting product:', error);
       }
     }
+  };
+
+  const handleImageSelect = (imageUrl) => {
+    setProductForm({...productForm, image: imageUrl});
   };
 
   // UTILITY FUNCTIONS
@@ -195,26 +209,72 @@ function AdminDashboard() {
                   value={productForm.name}
                   onChange={(e) => setProductForm({...productForm, name: e.target.value})}
                   required
+                  placeholder="e.g., Classic Milk Tea"
                 />
               </div>
+              
               <div className="form-group">
-                <label>Price</label>
+                <label>Price (₱)</label>
                 <input
                   type="number"
                   value={productForm.price}
                   onChange={(e) => setProductForm({...productForm, price: e.target.value})}
                   required
+                  placeholder="e.g., 120"
+                  min="0"
                 />
               </div>
+              
               <div className="form-group">
-                <label>Emoji/Image</label>
+                <label>Product Image URL</label>
                 <input
-                  type="text"
+                  type="url"
                   value={productForm.image}
                   onChange={(e) => setProductForm({...productForm, image: e.target.value})}
-                  placeholder="🧋"
+                  required
+                  placeholder="https://example.com/image.jpg"
                 />
+                <small className="help-text">Enter a valid image URL</small>
               </div>
+
+              {/* Image Preview */}
+              {productForm.image && (
+                <div className="image-preview">
+                  <label>Image Preview:</label>
+                  <div className="preview-container">
+                    <img 
+                      src={productForm.image} 
+                      alt="Preview" 
+                      className="preview-image"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div className="preview-fallback" style={{display: 'none'}}>
+                      ❌ Invalid Image URL
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Image Selection */}
+              <div className="form-group">
+                <label>Quick Image Selection:</label>
+                <div className="image-options">
+                  {sampleImages.map((imageUrl, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className={`image-option ${productForm.image === imageUrl ? 'selected' : ''}`}
+                      onClick={() => handleImageSelect(imageUrl)}
+                    >
+                      <img src={imageUrl} alt={`Option ${index + 1}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
               <div className="form-group">
                 <label>Category</label>
                 <select
@@ -225,16 +285,21 @@ function AdminDashboard() {
                   <option value="Fruit Tea">Fruit Tea</option>
                   <option value="Coffee">Coffee</option>
                   <option value="Specialty">Specialty</option>
+                  <option value="Seasonal">Seasonal</option>
                 </select>
               </div>
+              
               <div className="form-group">
                 <label>Description</label>
                 <textarea
                   value={productForm.description}
                   onChange={(e) => setProductForm({...productForm, description: e.target.value})}
                   rows="3"
+                  placeholder="Describe the taste and ingredients..."
+                  required
                 />
               </div>
+              
               <div className="form-actions">
                 <button type="button" className="btn-cancel" onClick={() => setShowProductForm(false)}>
                   Cancel
@@ -512,7 +577,18 @@ function AdminDashboard() {
                 {products.map(product => (
                   <div key={product.id || product._id} className="product-card">
                     <div className="product-image">
-                      <span className="product-emoji">{product.image}</span>
+                      <img 
+                        src={product.image} 
+                        alt={product.name}
+                        className="product-img"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="image-fallback">
+                        🧋 No Image
+                      </div>
                     </div>
                     <div className="product-info">
                       <h3>{product.name}</h3>

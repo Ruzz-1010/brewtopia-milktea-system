@@ -13,16 +13,16 @@ function Dashboard() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [user, setUser] = useState(null);
-  const [currentView, setCurrentView] = useState('customer');
-  const [loading, setLoading] = useState(true);
-  const [cartLoading, setCartLoading] = useState(false);
+  const [currentView, setCurrentView] = useState('customer'); // 'customer' or 'admin'
 
   useEffect(() => {
     loadProducts();
+    // Check if user is already logged in
     const savedUser = localStorage.getItem('brewtopia_user');
     if (savedUser) {
       const userData = JSON.parse(savedUser);
       setUser(userData);
+      // Auto-switch to admin view if user is admin
       if (userData.role === 'admin') {
         setCurrentView('admin');
       }
@@ -31,13 +31,10 @@ function Dashboard() {
 
   const loadProducts = async () => {
     try {
-      setLoading(true);
       const response = await axios.get(`${API_URL}/api/products`);
       setProducts(response.data);
     } catch (error) {
       console.error('Error loading products:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -46,20 +43,12 @@ function Dashboard() {
   };
 
   const handleCustomizedAddToCart = (cartItem) => {
-    setCartLoading(true);
-    setTimeout(() => {
-      setCart([...cart, cartItem]);
-      setCartLoading(false);
-    }, 500);
+    setCart([...cart, cartItem]);
   };
 
   const removeFromCart = (index) => {
-    setCartLoading(true);
-    setTimeout(() => {
-      const newCart = cart.filter((_, i) => i !== index);
-      setCart(newCart);
-      setCartLoading(false);
-    }, 300);
+    const newCart = cart.filter((_, i) => i !== index);
+    setCart(newCart);
   };
 
   const getTotalPrice = () => {
@@ -71,20 +60,17 @@ function Dashboard() {
       setShowAuthModal(true);
       return;
     }
-    
-    setCartLoading(true);
-    setTimeout(() => {
-      alert(`Order placed! Total: ₱${getTotalPrice()}`);
-      setCart([]);
-      setCartLoading(false);
-    }, 1000);
+    alert(`Order placed! Total: ₱${getTotalPrice()}`);
+    setCart([]);
   };
 
   const handleLogin = (userData) => {
     setUser(userData);
+    // Save to localStorage
     localStorage.setItem('brewtopia_user', JSON.stringify(userData));
     localStorage.setItem('brewtopia_token', userData.token);
     
+    // Auto-switch to admin view if admin
     if (userData.role === 'admin') {
       setCurrentView('admin');
     }
@@ -107,19 +93,10 @@ function Dashboard() {
     setCurrentView('customer');
   };
 
-  // Loading component
-  const LoadingSpinner = ({ size = 'medium' }) => (
-    <div className={`loading-spinner ${size}`}>
-      <div className="bubble"></div>
-      <div className="bubble"></div>
-      <div className="bubble"></div>
-    </div>
-  );
-
   // If user is admin and in admin view, show AdminDashboard
   if (currentView === 'admin' && user && user.role === 'admin') {
     return (
-      <div className="admin-container">
+      <div>
         <div className="admin-switcher">
           <button onClick={switchToCustomer} className="switch-btn">
             🧋 Switch to Customer View
@@ -139,37 +116,30 @@ function Dashboard() {
     <div className="dashboard">
       {/* Header */}
       <header className="header">
-        <div className="header-content">
-          <div className="logo-section">
-            <div className="logo">🧋</div>
-            <h1>Brewtopia Milk Tea</h1>
-          </div>
-          <div className="header-actions">
-            {user ? (
-              <div className="user-info">
-                <span className="welcome-text">Welcome, {user.name}! 👋</span>
-                {user.role === 'admin' && (
-                  <button onClick={switchToAdmin} className="admin-access-btn">
-                   
-                  </button>
-                )}
-                <button onClick={handleLogout} className="logout-btn">
-                  Logout
+        <h1>🧋 Brewtopia Milk Tea</h1>
+        <div className="header-actions">
+          {user ? (
+            <div className="user-info">
+              <span>Welcome, {user.name}! 👋</span>
+              {user.role === 'admin' && (
+                <button onClick={switchToAdmin} className="admin-access-btn">
+                  ⚙️ Admin Panel
                 </button>
-              </div>
-            ) : (
-              <button 
-                className="login-btn"
-                onClick={() => setShowAuthModal(true)}
-              >
-                Login/Register
+              )}
+              <button onClick={handleLogout} className="logout-btn">
+                Logout
               </button>
-            )}
-            <div className="cart-summary">
-              <span className="cart-icon">🛒</span>
-              <span className="cart-count">{cart.length} items</span>
-              <span className="cart-total">₱{getTotalPrice()}</span>
             </div>
+          ) : (
+            <button 
+              className="login-btn"
+              onClick={() => setShowAuthModal(true)}
+            >
+              Login/Register
+            </button>
+          )}
+          <div className="cart-summary">
+            🛒 {cart.length} items - ₱{getTotalPrice()}
           </div>
         </div>
       </header>
@@ -177,77 +147,49 @@ function Dashboard() {
       <div className="container">
         {/* Products Grid */}
         <div className="products-section">
-          <div className="section-header">
-            <h2>Our Milk Tea Menu</h2>
-            <div className="decorative-line"></div>
-          </div>
-          
-          {loading ? (
-            <div className="loading-container">
-              <LoadingSpinner size="large" />
-              <p>Brewing our delicious menu...</p>
-            </div>
-          ) : (
-            <div className="products-grid">
-              {products.map(product => (
-                <div key={product.id} className="product-card">
-                  <div className="product-image">
-                    <span className="product-emoji">{product.image}</span>
-                    <div className="product-overlay">
-                      <button 
-                        className="add-to-cart-btn"
-                        onClick={() => handleAddToCart(product)}
-                      >
-                        Customize & Add to Cart
-                      </button>
-                    </div>
-                  </div>
-                  <div className="product-info">
-                    <h3>{product.name}</h3>
-                    <p className="product-description">{product.description}</p>
-                    <div className="product-price">₱{product.price}</div>
-                  </div>
+          <h2>Our Milk Tea Menu</h2>
+          <div className="products-grid">
+            {products.map(product => (
+              <div key={product.id} className="product-card">
+                <div className="product-image">
+                  <span>{product.image}</span>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="product-info">
+                  <h3>{product.name}</h3>
+                  <p>{product.description}</p>
+                  <div className="product-price">₱{product.price}</div>
+                  <button 
+                    className="add-to-cart-btn"
+                    onClick={() => handleAddToCart(product)}
+                  >
+                    Customize & Add to Cart
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Shopping Cart */}
         <div className="cart-section">
-          <div className="section-header">
-            <h2>🛒 Your Order</h2>
-            <div className="decorative-line"></div>
-          </div>
-          
-          {cartLoading ? (
-            <div className="loading-container">
-              <LoadingSpinner />
-              <p>Updating cart...</p>
-            </div>
-          ) : cart.length === 0 ? (
-            <div className="empty-cart">
-              <div className="empty-cart-icon">🧋</div>
-              <p>Your cart is empty</p>
-              <p className="empty-cart-subtitle">Add some delicious milk tea!</p>
-            </div>
+          <h2>🛒 Your Order</h2>
+          {cart.length === 0 ? (
+            <p>Your cart is empty</p>
           ) : (
             <div className="cart-items">
               {cart.map((item, index) => (
                 <div key={index} className="cart-item">
                   <div className="item-info">
-                    <strong className="item-name">{item.name}</strong>
-                    <div className="customization-details">
-                      <span>Size: {item.customizations.size}</span>
-                      <span>Sugar: {item.customizations.sugar}</span>
-                      <span>Ice: {item.customizations.ice}</span>
-                      {item.customizations.addons.length > 0 && (
-                        <span>Add-ons: {item.customizations.addons.join(', ')}</span>
-                      )}
-                    </div>
+                    <strong>{item.name}</strong>
+                    <div>Size: {item.customizations.size}</div>
+                    <div>Sugar: {item.customizations.sugar}</div>
+                    <div>Ice: {item.customizations.ice}</div>
+                    {item.customizations.addons.length > 0 && (
+                      <div>Add-ons: {item.customizations.addons.join(', ')}</div>
+                    )}
                   </div>
                   <div className="item-actions">
-                    <span className="item-price">₱{item.finalPrice || item.price}</span>
+                    <span>₱{item.finalPrice || item.price}</span>
                     <button 
                       className="remove-btn"
                       onClick={() => removeFromCart(index)}
@@ -257,18 +199,12 @@ function Dashboard() {
                   </div>
                 </div>
               ))}
-              <div className="cart-footer">
-                <div className="cart-total">
-                  <strong>Total: ₱{getTotalPrice()}</strong>
-                </div>
-                <button 
-                  className={`checkout-btn ${!user ? 'checkout-disabled' : ''}`} 
-                  onClick={handleCheckout}
-                  disabled={!user}
-                >
-                  {user ? 'Place Order' : 'Login to Checkout'}
-                </button>
+              <div className="cart-total">
+                <strong>Total: ₱{getTotalPrice()}</strong>
               </div>
+              <button className="checkout-btn" onClick={handleCheckout}>
+                {user ? 'Place Order' : 'Login to Checkout'}
+              </button>
             </div>
           )}
         </div>

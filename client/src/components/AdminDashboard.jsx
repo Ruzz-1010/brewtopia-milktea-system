@@ -11,6 +11,7 @@ function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
   
   // Form states
   const [showProductForm, setShowProductForm] = useState(false);
@@ -23,19 +24,24 @@ function AdminDashboard() {
     category: 'Milk Tea'
   });
 
-  // Sample image URLs for quick selection
+  // Sample images for quick selection
   const sampleImages = [
-    'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=300&fit=crop', // Milk tea
-    'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=300&fit=crop', // Bubble tea
-    'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&h=300&fit=crop', // Matcha
-    'https://images.unsplash.com/photo-1525385133512-2f3bdd24ac30?w=400&h=300&fit=crop', // Taro
-    'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=300&fit=crop', // Wintermelon
-    'https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=400&h=300&fit=crop'  // Fruit tea
+    'https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1525385133512-2f3bdd24ac30?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&h=300&fit=crop',
+    'https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=400&h=300&fit=crop'
   ];
 
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  const showNotification = (msg) => {
+    setMessage(msg);
+    setTimeout(() => setMessage(''), 3000);
+  };
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -43,7 +49,7 @@ function AdminDashboard() {
       const [statsRes, ordersRes, productsRes] = await Promise.all([
         axios.get(`${API_URL}/api/admin/dashboard`),
         axios.get(`${API_URL}/api/admin/orders?limit=20`),
-        axios.get(`${API_URL}/api/products`)
+        axios.get(`${API_URL}/api/admin/products`)
       ]);
       
       setStats(statsRes.data);
@@ -51,6 +57,13 @@ function AdminDashboard() {
       setProducts(productsRes.data);
     } catch (error) {
       console.error('Error loading admin data:', error);
+      // If admin products fail, try regular products endpoint
+      try {
+        const productsRes = await axios.get(`${API_URL}/api/products`);
+        setProducts(productsRes.data);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
@@ -63,8 +76,10 @@ function AdminDashboard() {
         status: newStatus
       });
       loadDashboardData();
+      showNotification('Order status updated!');
     } catch (error) {
       console.error('Error updating order:', error);
+      showNotification('Error updating order status');
     }
   };
 
@@ -74,7 +89,7 @@ function AdminDashboard() {
     setProductForm({
       name: '',
       price: '',
-      image: sampleImages[0], // Default to first sample image
+      image: sampleImages[0],
       description: '',
       category: 'Milk Tea'
     });
@@ -96,33 +111,38 @@ function AdminDashboard() {
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     try {
+      const productData = {
+        ...productForm,
+        price: Number(productForm.price),
+        customizations: {
+          sizes: [
+            { name: "Regular", price: 0 },
+            { name: "Large", price: 20 },
+            { name: "X-Large", price: 30 }
+          ],
+          sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+          iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+          addons: [
+            { name: "Pearls", price: 15 },
+            { name: "Pudding", price: 20 },
+            { name: "Whip Cream", price: 25 }
+          ]
+        }
+      };
+
       if (editingProduct) {
-        // Update existing product
-        await axios.put(`${API_URL}/api/admin/products/${editingProduct._id}`, productForm);
+        await axios.put(`${API_URL}/api/admin/products/${editingProduct._id}`, productData);
+        showNotification('Product updated successfully!');
       } else {
-        // Add new product
-        await axios.post(`${API_URL}/api/admin/products`, {
-          ...productForm,
-          customizations: {
-            sizes: [
-              { name: "Regular", price: 0 },
-              { name: "Large", price: 20 },
-              { name: "X-Large", price: 30 }
-            ],
-            sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
-            iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
-            addons: [
-              { name: "Pearls", price: 15 },
-              { name: "Pudding", price: 20 },
-              { name: "Whip Cream", price: 25 }
-            ]
-          }
-        });
+        await axios.post(`${API_URL}/api/admin/products`, productData);
+        showNotification('Product added successfully!');
       }
+      
       setShowProductForm(false);
       loadDashboardData();
     } catch (error) {
       console.error('Error saving product:', error);
+      showNotification('Error saving product');
     }
   };
 
@@ -130,9 +150,11 @@ function AdminDashboard() {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         await axios.delete(`${API_URL}/api/admin/products/${productId}`);
+        showNotification('Product deleted successfully!');
         loadDashboardData();
       } catch (error) {
         console.error('Error deleting product:', error);
+        showNotification('Error deleting product');
       }
     }
   };
@@ -176,6 +198,13 @@ function AdminDashboard() {
 
   return (
     <div className="admin-dashboard">
+      {/* Notification */}
+      {message && (
+        <div className="notification">
+          {message}
+        </div>
+      )}
+
       {/* Mobile Header */}
       <header className="admin-mobile-header">
         <button 
@@ -203,7 +232,7 @@ function AdminDashboard() {
             </div>
             <form onSubmit={handleSaveProduct} className="product-form">
               <div className="form-group">
-                <label>Product Name</label>
+                <label>Product Name *</label>
                 <input
                   type="text"
                   value={productForm.name}
@@ -214,19 +243,19 @@ function AdminDashboard() {
               </div>
               
               <div className="form-group">
-                <label>Price (₱)</label>
+                <label>Price (₱) *</label>
                 <input
                   type="number"
                   value={productForm.price}
                   onChange={(e) => setProductForm({...productForm, price: e.target.value})}
                   required
-                  placeholder="e.g., 120"
+                  placeholder="120"
                   min="0"
                 />
               </div>
               
               <div className="form-group">
-                <label>Product Image URL</label>
+                <label>Product Image URL *</label>
                 <input
                   type="url"
                   value={productForm.image}
@@ -234,7 +263,6 @@ function AdminDashboard() {
                   required
                   placeholder="https://example.com/image.jpg"
                 />
-                <small className="help-text">Enter a valid image URL</small>
               </div>
 
               {/* Image Preview */}
@@ -276,10 +304,11 @@ function AdminDashboard() {
               </div>
               
               <div className="form-group">
-                <label>Category</label>
+                <label>Category *</label>
                 <select
                   value={productForm.category}
                   onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                  required
                 >
                   <option value="Milk Tea">Milk Tea</option>
                   <option value="Fruit Tea">Fruit Tea</option>
@@ -290,7 +319,7 @@ function AdminDashboard() {
               </div>
               
               <div className="form-group">
-                <label>Description</label>
+                <label>Description *</label>
                 <textarea
                   value={productForm.description}
                   onChange={(e) => setProductForm({...productForm, description: e.target.value})}
@@ -352,6 +381,7 @@ function AdminDashboard() {
             >
               <span className="nav-icon">🥤</span>
               <span className="nav-text">Products</span>
+              <span className="nav-badge">{products.length}</span>
             </button>
 
             <button 
@@ -564,7 +594,7 @@ function AdminDashboard() {
               <div className="page-header">
                 <div className="header-content">
                   <h1>Product Management</h1>
-                  <p>Manage your milk tea menu</p>
+                  <p>Manage your milk tea menu ({products.length} products)</p>
                 </div>
                 <div className="header-actions">
                   <button className="btn-primary" onClick={handleAddProduct}>
@@ -574,54 +604,61 @@ function AdminDashboard() {
               </div>
 
               <div className="products-grid">
-                {products.map(product => (
-                  <div key={product.id || product._id} className="product-card">
-                    <div className="product-image">
-                      <img 
-                        src={product.image} 
-                        alt={product.name}
-                        className="product-img"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className="image-fallback">
-                        🧋 No Image
-                      </div>
-                    </div>
-                    <div className="product-info">
-                      <h3>{product.name}</h3>
-                      <p className="product-description">{product.description}</p>
-                      <div className="product-meta">
-                        <span className="product-price">₱{product.price}</span>
-                        <span className="product-category">{product.category}</span>
-                      </div>
-                      <div className="customization-info">
-                        <div className="customization-item">
-                          <span>Sizes: {product.customizations?.sizes?.length || 3}</span>
-                        </div>
-                        <div className="customization-item">
-                          <span>Add-ons: {product.customizations?.addons?.length || 3}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="product-actions">
-                      <button 
-                        className="btn-secondary" 
-                        onClick={() => handleEditProduct(product)}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button 
-                        className="btn-danger"
-                        onClick={() => deleteProduct(product._id || product.id)}
-                      >
-                        🗑️ Delete
-                      </button>
-                    </div>
+                {products.length === 0 ? (
+                  <div className="empty-state">
+                    <h3>No products yet</h3>
+                    <p>Click "Add Product" to create your first milk tea item!</p>
                   </div>
-                ))}
+                ) : (
+                  products.map(product => (
+                    <div key={product._id || product.id} className="product-card">
+                      <div className="product-image">
+                        <img 
+                          src={product.image} 
+                          alt={product.name}
+                          className="product-img"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="image-fallback">
+                          🧋 No Image
+                        </div>
+                      </div>
+                      <div className="product-info">
+                        <h3>{product.name}</h3>
+                        <p className="product-description">{product.description}</p>
+                        <div className="product-meta">
+                          <span className="product-price">₱{product.price}</span>
+                          <span className="product-category">{product.category}</span>
+                        </div>
+                        <div className="customization-info">
+                          <div className="customization-item">
+                            <span>Sizes: {product.customizations?.sizes?.length || 3}</span>
+                          </div>
+                          <div className="customization-item">
+                            <span>Add-ons: {product.customizations?.addons?.length || 3}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="product-actions">
+                        <button 
+                          className="btn-secondary" 
+                          onClick={() => handleEditProduct(product)}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button 
+                          className="btn-danger"
+                          onClick={() => deleteProduct(product._id)}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}

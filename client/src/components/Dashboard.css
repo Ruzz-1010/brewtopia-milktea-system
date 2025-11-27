@@ -3,13 +3,14 @@
 /* CSS Variables for Consistent Design */
 :root {
   /* Colors */
-  --primary-color: #8B4513;
-  --primary-light: #A0522D;
-  --secondary-color: #D2691E;
-  --accent-color: #FF6B6B;
-  --success-color: #27AE60;
-  --warning-color: #F39C12;
-  --error-color: #E74C3C;
+ /* Elegant Milk Tea Theme */
+--primary-color: #C4A484; /* Warm, creamy beige - like a classic milk tea */
+--primary-light: #E0D3C4; /* Lighter, airy cream - for a soft contrast */
+--secondary-color: #A78A7F; /* Muted, dusty brown - like brewed tea leaves */
+--accent-color: #D4B5A4; /* Soft, rosy beige - a gentle highlight color */
+--success-color: #A7C4A0; /* Muted sage green - elegant and natural */
+--warning-color: #E3C9A8; /* Warm, creamy peach - a soft alert */
+--error-color: #C99789; /* Muted terracotta - sophisticated and soft */
   
   /* Neutrals */
   --white: #FFFFFF;

@@ -5,7 +5,8 @@ const orderSchema = new mongoose.Schema({
   customer: {
     name: String,
     email: String,
-    phone: String
+    phone: String,
+    address: String
   },
   items: [{
     product: String,
@@ -19,20 +20,17 @@ const orderSchema = new mongoose.Schema({
     }
   }],
   totalAmount: Number,
-  orderType: { type: String, enum: ['pickup', 'delivery'] },
+  orderType: { type: String, enum: ['pickup', 'delivery'], default: 'pickup' },
   status: { 
     type: String, 
     enum: ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'],
     default: 'pending'
   },
-  paymentMethod: { type: String, enum: ['cod', 'gcash', 'maya', 'card'] },
+  paymentMethod: { type: String, enum: ['cod', 'gcash', 'maya', 'card'], default: 'cod' },
   paymentStatus: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
-  deliveryAddress: String,
-  orderDate: { type: Date, default: Date.now },
-  estimatedReady: Date
+  orderDate: { type: Date, default: Date.now }
 });
 
-// Generate order number before saving
 orderSchema.pre('save', async function(next) {
   if (!this.orderNumber) {
     const count = await mongoose.model('Order').countDocuments();

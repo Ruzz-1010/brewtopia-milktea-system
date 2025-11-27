@@ -89,15 +89,53 @@ export default function Dashboard() {
 
   const checkout = () => (user ? setShowPaymentModal(true) : setShowAuthModal(true));
 
-  const onPaySuccess = (details) => {
+  const onPaySuccess = async (details) => {
     setCartLoading(true);
-    setTimeout(() => {
-      alert(`Order placed! Total: ₱${total}\nPayment: ${details.method}`);
+    try {
+      // Prepare order data
+      const orderData = {
+        customer: {
+          name: user.name,
+          email: user.email,
+          phone: user.phone || '',
+          address: user.address || ''
+        },
+        items: cart.map(item => ({
+          name: item.name,
+          price: item.price,
+          finalPrice: item.finalPrice || item.price,
+          quantity: 1,
+          customizations: item.customizations || {
+            size: 'Regular',
+            sugar: '50%',
+            ice: 'Regular Ice',
+            addons: []
+          }
+        })),
+        totalAmount: total,
+        paymentStatus: 'paid',
+        status: 'pending'
+      };
+
+      // Create order in database
+      const response = await axios.post(`${API_URL}/api/orders`, orderData);
+      
+      alert(`Order placed successfully! Order #: ${response.data.orderNumber}\nTotal: ₱${total}\nPayment: ${details.method}`);
       setCart([]);
-      setCartLoading(false);
       setShowPaymentModal(false);
       setShowMobileCart(false);
-    }, 2000);
+      
+      // Reload the page to ensure admin dashboard gets updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      alert('Order failed. Please try again.');
+    } finally {
+      setCartLoading(false);
+    }
   };
 
   /* ---------- auth ---------- */

@@ -213,7 +213,42 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+// ✅ ORDERS ROUTES - UPDATED
+app.post('/api/orders', async (req, res) => {
+  try {
+    const Order = require('./models/Order');
+    const order = new Order(req.body);
+    await order.save();
+    
+    // Populate the order to get the generated orderNumber
+    const savedOrder = await Order.findById(order._id);
+    
+    res.status(201).json(savedOrder);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
+app.get('/api/orders', async (req, res) => {
+  try {
+    const Order = require('./models/Order');
+    const orders = await Order.find().sort({ orderDate: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/orders/my-orders/:email', async (req, res) => {
+  try {
+    const Order = require('./models/Order');
+    const orders = await Order.find({ 'customer.email': req.params.email })
+      .sort({ orderDate: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 // ✅ ORDERS ROUTES
 app.post('/api/orders', async (req, res) => {
   try {

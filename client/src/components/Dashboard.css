@@ -96,7 +96,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(193,154,107);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--gray-200);
   z-index: 1000;

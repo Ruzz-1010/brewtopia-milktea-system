@@ -107,25 +107,21 @@ function Dashboard() {
     setCurrentView('customer');
   };
 
-  // Loading component
   const LoadingSpinner = () => (
-    <div className="bubble-loader">
-      <div className="bubble"></div>
-      <div className="bubble"></div>
-      <div className="bubble"></div>
+    <div className="gradient-spinner">
+      <div className="spinner-circle"></div>
     </div>
   );
 
-  // If user is admin and in admin view, show AdminDashboard
   if (currentView === 'admin' && user && user.role === 'admin') {
     return (
       <div className="admin-layout">
         <div className="admin-header">
           <button onClick={switchToCustomer} className="back-btn">
-            ← Back to Store
+            ← Customer View
           </button>
           <div className="admin-info">
-            <span>Admin: {user.name}</span>
+            <span>Welcome, Admin {user.name}</span>
             <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
@@ -136,24 +132,22 @@ function Dashboard() {
     );
   }
 
-  // Customer View
   return (
-    <div className="store-front">
-      {/* Header */}
-      <header className="store-header">
-        <div className="header-container">
+    <div className="dashboard">
+      <header className="header">
+        <div className="header-content">
           <div className="brand">
             <div className="logo">🧋</div>
             <div className="brand-text">
               <h1>Brewtopia</h1>
-              <span className="tagline">Artisan Milk Tea</span>
+              <span className="tagline">Premium Bubble Tea</span>
             </div>
           </div>
           
-          <div className="header-controls">
+          <div className="header-actions">
             {user ? (
-              <div className="user-section">
-                <span className="welcome">Welcome, {user.name}</span>
+              <div className="user-info">
+                <span className="welcome-text">Hi, {user.name}! 👋</span>
                 {user.role === 'admin' && (
                   <button onClick={switchToAdmin} className="admin-btn">
                     Admin Panel
@@ -165,18 +159,18 @@ function Dashboard() {
               </div>
             ) : (
               <button 
-                className="signin-btn"
+                className="auth-btn"
                 onClick={() => setShowAuthModal(true)}
               >
                 Sign In
               </button>
             )}
             
-            <div className="cart-preview">
-              <div className="cart-icon">
-                🛒
+            <div className="cart-summary">
+              <div className="cart-icon-wrapper">
+                <span className="cart-icon">🛒</span>
                 {cart.length > 0 && (
-                  <span className="cart-count">{cart.length}</span>
+                  <span className="cart-badge">{cart.length}</span>
                 )}
               </div>
               <div className="cart-total">₱{getTotalPrice()}</div>
@@ -185,29 +179,28 @@ function Dashboard() {
         </div>
       </header>
 
-      <main className="store-main">
-        <div className="layout-grid">
-          {/* Products Section */}
+      <main className="main-content">
+        <div className="content-grid">
           <section className="products-section">
             <div className="section-header">
-              <h2>Our Signature Collection</h2>
-              <p>Handcrafted milk teas made with premium ingredients</p>
+              <h2>Our Signature Drinks</h2>
+              <p>Handcrafted with premium ingredients</p>
             </div>
 
             {loading ? (
               <div className="loading-state">
                 <LoadingSpinner />
-                <p>Brewing our menu...</p>
+                <p>Brewing delicious drinks...</p>
               </div>
             ) : (
               <div className="products-grid">
                 {products.map(product => (
                   <div key={product.id} className="product-card">
                     <div className="product-image">
-                      <span className="product-icon">{product.image}</span>
+                      <span className="product-emoji">{product.image}</span>
                       <div className="product-overlay">
                         <button 
-                          className="add-btn overlay-btn"
+                          className="quick-add-btn"
                           onClick={() => handleAddToCart(product)}
                         >
                           Customize & Add
@@ -216,11 +209,11 @@ function Dashboard() {
                     </div>
                     <div className="product-info">
                       <h3>{product.name}</h3>
-                      <p className="product-desc">{product.description}</p>
+                      <p className="product-description">{product.description}</p>
                       <div className="product-footer">
                         <span className="price">₱{product.price}</span>
                         <button 
-                          className="add-btn"
+                          className="add-to-cart-btn"
                           onClick={() => handleAddToCart(product)}
                         >
                           Add to Cart
@@ -233,12 +226,11 @@ function Dashboard() {
             )}
           </section>
 
-          {/* Cart Sidebar */}
           <aside className="cart-sidebar">
             <div className="cart-container">
               <div className="cart-header">
                 <h3>Your Order</h3>
-                <div className="item-count">{cart.length} items</div>
+                <div className="items-count">{cart.length} items</div>
               </div>
 
               {cartLoading ? (
@@ -250,19 +242,19 @@ function Dashboard() {
                 <div className="empty-cart">
                   <div className="empty-icon">🧋</div>
                   <p>Your cart is empty</p>
-                  <span>Add some delicious milk tea!</span>
+                  <span>Add some delicious drinks!</span>
                 </div>
               ) : (
                 <div className="cart-content">
                   <div className="cart-items">
                     {cart.map((item, index) => (
                       <div key={index} className="cart-item">
-                        <div className="item-info">
+                        <div className="item-details">
                           <div className="item-header">
                             <strong>{item.name}</strong>
                             <span className="item-price">₱{item.finalPrice || item.price}</span>
                           </div>
-                          <div className="item-details">
+                          <div className="customization-info">
                             <span>{item.customizations.size}</span>
                             <span>• {item.customizations.sugar} sugar</span>
                             <span>• {item.customizations.ice} ice</span>
@@ -272,9 +264,8 @@ function Dashboard() {
                           </div>
                         </div>
                         <button 
-                          className="remove-btn"
+                          className="remove-item-btn"
                           onClick={() => removeFromCart(index)}
-                          title="Remove item"
                         >
                           ×
                         </button>
@@ -284,11 +275,11 @@ function Dashboard() {
                   
                   <div className="cart-footer">
                     <div className="total-section">
-                      <div className="total-label">Total Amount</div>
-                      <div className="total-amount">₱{getTotalPrice()}</div>
+                      <span className="total-label">Total</span>
+                      <span className="total-amount">₱{getTotalPrice()}</span>
                     </div>
                     <button 
-                      className={`checkout-btn ${!user ? 'disabled' : ''}`}
+                      className={`checkout-btn ${!user ? 'checkout-disabled' : ''}`}
                       onClick={handleCheckout}
                       disabled={!user}
                     >
@@ -302,7 +293,6 @@ function Dashboard() {
         </div>
       </main>
 
-      {/* Modals */}
       {selectedProduct && (
         <CustomizationModal
           product={selectedProduct}

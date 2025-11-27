@@ -1,14 +1,15 @@
+/* Dashboard.jsx */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CustomizationModal from './CustomizationModal';
-import AuthModal from './AuthModal';
+import AuthModal      from './AuthModal';
 import AdminDashboard from './AdminDashboard';
-import PaymentModal from './PaymentModal';
-import './Dashboard.css';
+import PaymentModal   from './PaymentModal';
 
 const API_URL = 'https://brewtopia-backend.onrender.com';
 
-function Dashboard() {
+export default function Dashboard() {
+  /* --------------------  STATE  -------------------- */
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -22,410 +23,314 @@ function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const categories = ['All', 'Milk Tea', 'Fruit Tea', 'Coffee', 'Specialty', 'Seasonal'];
+  const categories = ['All','Milk Tea','Fruit Tea','Coffee','Specialty','Seasonal'];
 
+  /* --------------------  HOOKS  -------------------- */
   useEffect(() => {
     loadProducts();
-    const savedUser = localStorage.getItem('brewtopia_user');
-    if (savedUser) {
-      const userData = JSON.parse(savedUser);
-      setUser(userData);
-      if (userData.role === 'admin') {
-        setCurrentView('admin');
-      }
+    const saved = localStorage.getItem('brewtopia_user');
+    if (saved) {
+      const u = JSON.parse(saved);
+      setUser(u);
+      if (u.role === 'admin') setCurrentView('admin');
     }
 
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  /* --------------------  DATA  -------------------- */
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/products`);
-      setProducts(response.data);
-    } catch (error) {
-      console.error('Error loading products:', error);
+      const { data } = await axios.get(`${API_URL}/api/products`);
+      setProducts(data);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredProducts = activeCategory === 'All' 
-    ? products.filter(product => 
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : products.filter(product => 
-        product.category === activeCategory && 
-        (product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-         product.description.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+  const filtered =
+    activeCategory === 'All'
+      ? products.filter(p =>
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.description.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : products.filter(
+          p =>
+            p.category === activeCategory &&
+            (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
 
-  const handleAddToCart = (product) => {
-    setSelectedProduct(product);
-  };
+  /* --------------------  CART LOGIC  -------------------- */
+  const addToCart = (product) => setSelectedProduct(product);
 
-  const handleCustomizedAddToCart = (cartItem) => {
+  const customizedAdd = (item) => {
     setCartLoading(true);
     setTimeout(() => {
-      setCart([...cart, cartItem]);
+      setCart((c) => [...c, item]);
       setCartLoading(false);
     }, 500);
   };
 
-  const removeFromCart = (index) => {
+  const remove = (idx) => {
     setCartLoading(true);
     setTimeout(() => {
-      const newCart = cart.filter((_, i) => i !== index);
-      setCart(newCart);
+      setCart((c) => c.filter((_, i) => i !== idx));
       setCartLoading(false);
     }, 300);
   };
 
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + (item.finalPrice || item.price), 0);
-  };
+  const total = cart.reduce((t, i) => t + (i.finalPrice || i.price), 0);
 
-  const handleCheckout = () => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-    
-    setShowPaymentModal(true);
-  };
+  const checkout = () => (user ? setShowPaymentModal(true) : setShowAuthModal(true));
 
-  const handlePaymentSuccess = (paymentDetails) => {
+  const onPaySuccess = (details) => {
     setCartLoading(true);
     setTimeout(() => {
-      console.log('Payment successful:', paymentDetails);
-      alert(`Order placed successfully! Total: ₱${getTotalPrice()}\nPayment Method: ${paymentDetails.method}`);
+      alert(`Order placed! Total: ₱${total}\nPayment: ${details.method}`);
       setCart([]);
       setCartLoading(false);
       setShowPaymentModal(false);
     }, 2000);
   };
 
-  const handleLogin = (userData) => {
-    setUser(userData);
-    localStorage.setItem('brewtopia_user', JSON.stringify(userData));
-    localStorage.setItem('brewtopia_token', userData.token);
-    
-    if (userData.role === 'admin') {
-      setCurrentView('admin');
-    }
+  /* --------------------  AUTH  -------------------- */
+  const login = (u) => {
+    setUser(u);
+    localStorage.setItem('brewtopia_user', JSON.stringify(u));
+    localStorage.setItem('brewtopia_token', u.token);
+    if (u.role === 'admin') setCurrentView('admin');
   };
-
-  const handleLogout = () => {
+  const logout = () => {
     setUser(null);
     setCurrentView('customer');
     localStorage.removeItem('brewtopia_user');
     localStorage.removeItem('brewtopia_token');
   };
+  const toAdmin   = () => user?.role === 'admin' && setCurrentView('admin');
+  const toShop    = () => setCurrentView('customer');
 
-  const switchToAdmin = () => {
-    if (user && user.role === 'admin') {
-      setCurrentView('admin');
-    }
-  };
-
-  const switchToCustomer = () => {
-    setCurrentView('customer');
-  };
-
-  const LoadingSpinner = () => (
-    <div className="modern-spinner">
-      <div className="spinner-ring"></div>
-      <div className="spinner-ring"></div>
-      <div className="spinner-ring"></div>
-    </div>
-  );
-
-  if (currentView === 'admin' && user && user.role === 'admin') {
+  /* --------------------  ADMIN VIEW  -------------------- */
+  if (currentView === 'admin' && user?.role === 'admin')
     return (
       <div className="admin-layout">
-        <div className="admin-header">
-          <button onClick={switchToCustomer} className="back-to-shop-btn">
-            ← Back to Shop
-          </button>
-          <div className="admin-info">
-            <span>Welcome, Admin {user.name}</span>
-            <button onClick={handleLogout} className="logout-btn">
-              Logout
-            </button>
-          </div>
-        </div>
+        <header className="admin-bar">
+          <button onClick={toShop} className="btn secondary">← Back to Shop</button>
+          <span>Welcome, Admin {user.name}</span>
+          <button onClick={logout} className="btn danger">Logout</button>
+        </header>
         <AdminDashboard />
       </div>
     );
-  }
 
+  /* --------------------  LOADER  -------------------- */
+  const Spinner = () => (
+    <div className="spinner">
+      <div /><div /><div />
+    </div>
+  );
+
+  /* --------------------  JSX  -------------------- */
   return (
-    <div className="brewtopia-dashboard">
-      {/* Clean Header */}
-      <header className={`clean-header ${isScrolled ? 'scrolled' : ''}`}>
-        <div className="header-content">
-          <div className="logo-section">
-            <div className="logo-icon">🧋</div>
-            <div className="brand-text">
-              <h1>Brewtopia</h1>
-              <span>Bubble Tea</span>
-            </div>
-          </div>
+    <>
+      <style>{`
+        :root{
+          --primary:#d63384;
+          --bg:#fff8fb;
+          --card:#ffffff;
+          --text:#333;
+          --muted:#888;
+          --radius:16px;
+          --shadow:0 4px 18px rgba(0,0,0,.06);
+        }
+        *{box-sizing:border-box;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+        body{background:var(--bg);color:var(--text);}
+        .top-bar{
+          position:sticky;top:0;left:0;right:0;
+          background:#fff;border-bottom:1px solid #eee;
+          display:flex;align-items:center;justify-content:space-between;
+          padding:.75rem 1.25rem;z-index:10;
+        }
+        .top-bar.scrolled{box-shadow:var(--shadow);}
+        .logo{font-size:1.5rem;font-weight:700;display:flex;align-items:center;gap:.5rem;}
+        .search input{
+          border:1px solid #ddd;border-radius:var(--radius);padding:.5rem .75rem;width:220px;
+        }
+        .top-actions{display:flex;align-items:center;gap:.75rem;}
+        .cart-tag{
+          background:var(--primary);color:#fff;
+          padding:.35rem .75rem;border-radius:var(--radius);
+          font-weight:600;cursor:pointer;
+        }
+        .wrapper{display:flex;gap:1.5rem;padding:1.5rem;max-width:1300px;margin:auto;}
+        aside{width:380px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.25rem;height:fit-content;position:sticky;top:90px;}
+        main{flex:1;}
+        .pills{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;}
+        .pill{
+          border:1px solid #ddd;background:#fff;padding:.4rem .9rem;border-radius:999px;font-size:.85rem;cursor:pointer;
+        }
+        .pill.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;}
+        .product{
+          background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+          overflow:hidden;display:flex;flex-direction:column;
+        }
+        .product img{width:100%;height:140px;object-fit:cover;}
+        .product-body{padding:.75rem 1rem 1rem;flex:1;display:flex;flex-direction:column;}
+        .product-body h4{font-size:1rem;margin-bottom:.25rem;}
+        .product-body p{font-size:.8rem;color:var(--muted);margin-bottom:.5rem;flex:1;}
+        .product-footer{display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;}
+        .price{font-weight:700;color:var(--primary);}
+        .btn{
+          border:none;padding:.5rem .9rem;border-radius:var(--radius);font-weight:600;cursor:pointer;
+        }
+        .btn.primary{background:var(--primary);color:#fff;}
+        .btn:disabled{opacity:.5;cursor:not-allowed;}
+        .empty{text-align:center;padding:2rem 1rem;color:var(--muted);}
+        .item-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid #f3f3f3;}
+        .item-row:last-child{border:none;}
+        .remove{background:none;border:none;font-size:1.2rem;color:#999;cursor:pointer;}
+        .summary{border-top:1px solid #eee;margin-top:1rem;padding-top:1rem;display:flex;justify-content:space-between;align-items:center;font-size:1.1rem;font-weight:700;}
+        .checkout{width:100%;margin-top:1rem;}
+        .spinner{display:flex;gap:.25rem;justify-content:center;padding:2rem 0;}
+        .spinner div{width:8px;height:8px;background:var(--primary);border-radius:50%;animation:bounce .6s infinite alternate;}
+        .spinner div:nth-child(2){animation-delay:.15s;}
+        .spinner div:nth-child(3){animation-delay:.3s;}
+        @keyframes bounce{to{transform:translateY(-6px);}}
+        @media(max-width:900px){
+          .wrapper{flex-direction:column;}
+          aside{width:100%;position:static;}
+        }
+      `}</style>
 
-          <div className="search-container">
-            <span className="search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Search drinks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-          </div>
-
-          <div className="header-actions">
-            {user ? (
-              <div className="user-menu">
-                <div className="user-info">
-                  <span className="user-name">{user.name}</span>
-                  {user.role === 'admin' && (
-                    <button onClick={switchToAdmin} className="admin-btn">
-                      Admin
-                    </button>
-                  )}
-                </div>
-                <button onClick={handleLogout} className="logout-btn">
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => setShowAuthModal(true)} className="sign-in-btn">
-                Sign In
-              </button>
-            )}
-            
-            <div className="cart-button" onClick={() => cart.length > 0 && document.querySelector('.cart-panel').scrollIntoView({ behavior: 'smooth' })}>
-              <span className="cart-icon">🛒</span>
-              {cart.length > 0 && (
-                <span className="cart-count">{cart.length}</span>
+      {/* ------- HEADER ------- */}
+      <header className={`top-bar ${isScrolled ? 'scrolled' : ''}`}>
+        <div className="logo">🧋 Brewtopia</div>
+        <div className="search">
+          <input
+            placeholder="Search drinks…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="top-actions">
+          {!user ? (
+            <button className="btn primary" onClick={() => setShowAuthModal(true)}>Sign In</button>
+          ) : (
+            <>
+              <span>Hi, {user.name}</span>
+              {user.role === 'admin' && (
+                <button className="btn secondary" onClick={toAdmin}>Admin</button>
               )}
-              <span className="cart-total">₱{getTotalPrice()}</span>
-            </div>
+              <button className="btn secondary" onClick={logout}>Logout</button>
+            </>
+          )}
+          <div className="cart-tag" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>
+            🛒 {cart.length} · ₱{total}
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-content">
-          <div className="hero-text">
-            <h2>Crafted with Love</h2>
-            <p>Discover your perfect bubble tea experience</p>
-            <div className="hero-stats">
-              <div className="stat-item">
-                <span className="stat-number">50+</span>
-                <span className="stat-label">Varieties</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">15min</span>
-                <span className="stat-label">Ready</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">4.9★</span>
-                <span className="stat-label">Rating</span>
-              </div>
-            </div>
+      {/* ------- BODY ------- */}
+      <div className="wrapper">
+        {/* PRODUCTS */}
+        <main>
+          <div className="pills">
+            {categories.map((c) => (
+              <button
+                key={c}
+                className={`pill ${activeCategory === c ? 'active' : ''}`}
+                onClick={() => setActiveCategory(c)}
+              >
+                {c}
+              </button>
+            ))}
           </div>
-        </div>
-      </section>
 
-      {/* Main Content */}
-      <main className="main-content">
-        <div className="content-wrapper">
-          {/* Category Filter */}
-          <section className="category-filter">
-            <div className="category-pills">
-              {categories.map(category => (
-                <button
-                  key={category}
-                  className={`category-pill ${activeCategory === category ? 'active' : ''}`}
-                  onClick={() => setActiveCategory(category)}
-                >
-                  {category}
-                </button>
+          {loading ? (
+            <Spinner />
+          ) : (
+            <div className="grid">
+              {filtered.map((p) => (
+                <div className="product" key={p._id}>
+                  <img src={p.image || ''} alt={p.name} onError={(e) => (e.target.src = 'https://cdn-icons-png.flaticon.com/512/3075/3075977.png')} />
+                  <div className="product-body">
+                    <h4>{p.name}</h4>
+                    <p>{p.description}</p>
+                    <div className="product-footer">
+                      <span className="price">₱{p.price}</span>
+                      <button className="btn primary" onClick={() => addToCart(p)}>Add</button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
-          </section>
+          )}
+        </main>
 
-          {/* Products Grid */}
-          <section className="products-section">
-            {loading ? (
-              <div className="loading-container">
-                <LoadingSpinner />
-                <p>Preparing your drinks...</p>
-              </div>
-            ) : (
-              <div className="products-grid">
-                {filteredProducts.map(product => (
-                  <div key={product._id} className="product-card">
-                    <div className="card-image">
-                      {product.image ? (
-                        <img 
-                          src={product.image} 
-                          alt={product.name}
-                          className="product-image"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div className="image-fallback">
-                        <span className="fallback-icon">
-                          {product.category === 'Milk Tea' && '🧋'}
-                          {product.category === 'Fruit Tea' && '🍓'}
-                          {product.category === 'Coffee' && '☕'}
-                          {product.category === 'Specialty' && '🌟'}
-                          {product.category === 'Seasonal' && '🎄'}
-                        </span>
-                      </div>
-                      <div className="card-badge">{product.category}</div>
-                    </div>
-                    
-                    <div className="card-content">
-                      <h3 className="product-title">{product.name}</h3>
-                      <p className="product-description">{product.description}</p>
-                      <div className="card-footer">
-                        <span className="product-price">₱{product.price}</span>
-                        <button 
-                          className="add-button"
-                          onClick={() => handleAddToCart(product)}
-                        >
-                          Add to Cart
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Cart Section */}
-          <section className="cart-section">
-            <div className="cart-panel">
-              <div className="cart-header">
-                <h3>Your Order</h3>
-                <span className="item-count">{cart.length} items</span>
-              </div>
-
-              {cartLoading ? (
-                <div className="loading-container">
-                  <LoadingSpinner />
-                </div>
-              ) : cart.length === 0 ? (
-                <div className="empty-cart">
-                  <div className="empty-icon">🧋</div>
-                  <p>Your cart is empty</p>
-                  <span className="empty-subtext">Add some drinks to get started</span>
-                </div>
-              ) : (
-                <>
-                  <div className="cart-items">
-                    {cart.map((item, index) => (
-                      <div key={index} className="cart-item">
-                        <div className="item-info">
-                          <h4 className="item-name">{item.name}</h4>
-                          <div className="item-details">
-                            <span>{item.customizations.size}</span>
-                            <span>{item.customizations.sugar}</span>
-                            <span>{item.customizations.ice}</span>
-                          </div>
-                          <span className="item-price">₱{item.finalPrice || item.price}</span>
-                        </div>
-                        <button 
-                          className="remove-btn"
-                          onClick={() => removeFromCart(index)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="cart-summary">
-                    <div className="summary-row">
-                      <span>Total</span>
-                      <span className="total-price">₱{getTotalPrice()}</span>
-                    </div>
-                    <button 
-                      className={`checkout-btn ${!user ? 'disabled' : ''}`}
-                      onClick={handleCheckout}
-                      disabled={!user}
-                    >
-                      {user ? 'Proceed to Payment' : 'Sign In to Checkout'}
-                    </button>
-                  </div>
-                </>
-              )}
+        {/* CART / YOUR ORDER */}
+        <aside>
+          <h3>Your Order</h3>
+          {cartLoading ? (
+            <Spinner />
+          ) : cart.length === 0 ? (
+            <div className="empty">
+              <div style={{ fontSize: '2rem' }}>🧋</div>
+              <p>Your cart is empty</p>
+              <small>Add some drinks to get started</small>
             </div>
-          </section>
-        </div>
-      </main>
+          ) : (
+            <>
+              {cart.map((it, idx) => (
+                <div className="item-row" key={idx}>
+                  <div>
+                    <strong>{it.name}</strong>
+                    <div style={{ fontSize: '.75rem', color: 'var(--muted)' }}>
+                      {it.customizations.size} · {it.customizations.sugar} · {it.customizations.ice}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                    <span className="price">₱{it.finalPrice || it.price}</span>
+                    <button className="remove" onClick={() => remove(idx)}>×</button>
+                  </div>
+                </div>
+              ))}
 
-      {/* Modals */}
+              <div className="summary">
+                <span>Total</span>
+                <span className="price">₱{total}</span>
+              </div>
+
+              <button className="btn primary checkout" disabled={!user} onClick={checkout}>
+                {user ? 'Proceed to Payment' : 'Sign In to Checkout'}
+              </button>
+            </>
+          )}
+        </aside>
+      </div>
+
+      {/* ------- MODALS ------- */}
       {selectedProduct && (
         <CustomizationModal
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
-          onAddToCart={handleCustomizedAddToCart}
+          onAddToCart={customizedAdd}
         />
       )}
-
-      {showAuthModal && (
-        <AuthModal
-          onClose={() => setShowAuthModal(false)}
-          onLogin={handleLogin}
-        />
-      )}
-
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} onLogin={login} />}
       {showPaymentModal && (
         <PaymentModal
           onClose={() => setShowPaymentModal(false)}
-          onPaymentSuccess={handlePaymentSuccess}
-          totalAmount={getTotalPrice()}
+          onPaymentSuccess={onPaySuccess}
+          totalAmount={total}
           orderItems={cart}
         />
       )}
-
-      {/* Footer */}
-      <footer className="clean-footer">
-        <div className="footer-content">
-          <div className="footer-brand">
-            <span className="footer-logo">🧋</span>
-            <div className="footer-text">
-              <h4>Brewtopia</h4>
-              <p>Bubble Tea Paradise</p>
-            </div>
-          </div>
-          <div className="footer-links">
-            <a href="#menu">Menu</a>
-            <a href="#about">About</a>
-            <a href="#contact">Contact</a>
-            <a href="#privacy">Privacy</a>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <p>&copy; 2024 Brewtopia. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
-
-export default Dashboard;

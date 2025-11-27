@@ -11,102 +11,17 @@ app.use(express.json());
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://brewtopia_admin:BrewtopiaMilkTea@brewtopia.mznffmc.mongodb.net/brewtopia?retryWrites=true&w=majority';
 
-// ✅ WORKING DIRECT ROUTES (No separate files for now)
-const products = [
-  {
-    id: 1,
-    name: "Classic Milk Tea",
-    price: 120,
-    image: "🧋",
-    description: "Original milk tea with creamy taste",
-    category: "Milk Tea",
-    customizations: {
-      sizes: [
-        { name: "Regular", price: 0 },
-        { name: "Large", price: 20 },
-        { name: "X-Large", price: 30 }
-      ],
-      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
-      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
-      addons: [
-        { name: "Pearls", price: 15 },
-        { name: "Pudding", price: 20 },
-        { name: "Whip Cream", price: 25 }
-      ]
-    }
-  },
-  {
-    id: 2,
-    name: "Wintermelon Milk Tea", 
-    price: 130,
-    image: "🍈",
-    description: "Sweet wintermelon with fresh milk",
-    category: "Milk Tea",
-    customizations: {
-      sizes: [
-        { name: "Regular", price: 0 },
-        { name: "Large", price: 20 },
-        { name: "X-Large", price: 30 }
-      ],
-      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
-      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
-      addons: [
-        { name: "Pearls", price: 15 },
-        { name: "Pudding", price: 20 },
-        { name: "Whip Cream", price: 25 }
-      ]
-    }
-  },
-  {
-    id: 3,
-    name: "Taro Milk Tea",
-    price: 140,
-    image: "🟣", 
-    description: "Creamy taro flavor with pearls",
-    category: "Milk Tea",
-    customizations: {
-      sizes: [
-        { name: "Regular", price: 0 },
-        { name: "Large", price: 20 },
-        { name: "X-Large", price: 30 }
-      ],
-      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
-      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
-      addons: [
-        { name: "Pearls", price: 15 },
-        { name: "Pudding", price: 20 },
-        { name: "Whip Cream", price: 25 }
-      ]
-    }
-  },
-  {
-    id: 4,
-    name: "Matcha Milk Tea",
-    price: 150,
-    image: "🍵",
-    description: "Premium matcha with milk", 
-    category: "Milk Tea",
-    customizations: {
-      sizes: [
-        { name: "Regular", price: 0 },
-        { name: "Large", price: 20 },
-        { name: "X-Large", price: 30 }
-      ],
-      sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
-      iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
-      addons: [
-        { name: "Pearls", price: 15 },
-        { name: "Pudding", price: 20 },
-        { name: "Whip Cream", price: 25 }
-      ]
-    }
+// ✅ PRODUCTS ROUTES - FROM DATABASE
+app.get('/api/products', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const products = await Product.find({ isAvailable: true });
+    console.log('📦 Products requested:', products.length);
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ message: error.message });
   }
-];
-
-// ✅ PRODUCTS ROUTES
-app.get('/api/products', (req, res) => {
-  console.log('📦 Products requested');
-  res.json(products);
 });
 
 // ✅ AUTH ROUTES
@@ -205,10 +120,89 @@ app.get('/api/orders/my-orders/:email', async (req, res) => {
   }
 });
 
-// ✅ ADMIN ROUTES
+// ✅ ADMIN PRODUCT ROUTES
+app.get('/api/admin/products', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const products = await Product.find();
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/admin/products', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    
+    // Add default customizations if not provided
+    const productData = {
+      ...req.body,
+      customizations: req.body.customizations || {
+        sizes: [
+          { name: "Regular", price: 0 },
+          { name: "Large", price: 20 },
+          { name: "X-Large", price: 30 }
+        ],
+        sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+        iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+        addons: [
+          { name: "Pearls", price: 15 },
+          { name: "Pudding", price: 20 },
+          { name: "Whip Cream", price: 25 }
+        ]
+      }
+    };
+    
+    const product = new Product(productData);
+    await product.save();
+    console.log('✅ New product created:', product.name);
+    res.status(201).json(product);
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/admin/products/:id', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    console.log('✅ Product updated:', product.name);
+    res.json(product);
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete('/api/admin/products/:id', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    console.log('✅ Product deleted:', product.name);
+    res.json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ✅ ADMIN DASHBOARD ROUTES
 app.get('/api/admin/dashboard', async (req, res) => {
   try {
     const Order = require('./models/Order');
+    const Product = require('./models/Product');
     
     const totalOrders = await Order.countDocuments();
     const pendingOrders = await Order.countDocuments({ status: 'pending' });
@@ -224,11 +218,14 @@ app.get('/api/admin/dashboard', async (req, res) => {
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ]);
 
+    const totalProducts = await Product.countDocuments();
+
     res.json({
       totalOrders,
       pendingOrders,
       todayOrders,
-      totalRevenue: totalRevenue[0]?.total || 0
+      totalRevenue: totalRevenue[0]?.total || 0,
+      totalProducts
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -271,10 +268,13 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
   }
 });
 
-// ✅ AUTO-CREATE ADMIN
-const createDefaultAdmin = async () => {
+// ✅ AUTO-CREATE ADMIN AND SAMPLE PRODUCTS
+const initializeData = async () => {
   try {
     const User = require('./models/User');
+    const Product = require('./models/Product');
+    
+    // Create admin if not exists
     const adminExists = await User.findOne({ role: 'admin' });
     
     if (!adminExists) {
@@ -291,8 +291,67 @@ const createDefaultAdmin = async () => {
     } else {
       console.log('✅ Admin account already exists');
     }
+
+    // Create sample products if no products exist
+    const productCount = await Product.countDocuments();
+    if (productCount === 0) {
+      const sampleProducts = [
+        {
+          name: "Classic Milk Tea",
+          price: 120,
+          image: "https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?w=400&h=300&fit=crop",
+          description: "Original milk tea with creamy taste and chewy pearls",
+          category: "Milk Tea"
+        },
+        {
+          name: "Wintermelon Milk Tea", 
+          price: 130,
+          image: "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400&h=300&fit=crop",
+          description: "Sweet wintermelon with fresh milk and refreshing taste",
+          category: "Milk Tea"
+        },
+        {
+          name: "Taro Milk Tea",
+          price: 140,
+          image: "https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&h=300&fit=crop", 
+          description: "Creamy taro flavor with purple yam and chewy pearls",
+          category: "Milk Tea"
+        },
+        {
+          name: "Matcha Milk Tea",
+          price: 150,
+          image: "https://images.unsplash.com/photo-1525385133512-2f3bdd24ac30?w=400&h=300&fit=crop",
+          description: "Premium Japanese matcha with milk and sweetener", 
+          category: "Milk Tea"
+        }
+      ];
+
+      for (const productData of sampleProducts) {
+        const product = new Product({
+          ...productData,
+          customizations: {
+            sizes: [
+              { name: "Regular", price: 0 },
+              { name: "Large", price: 20 },
+              { name: "X-Large", price: 30 }
+            ],
+            sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+            iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+            addons: [
+              { name: "Pearls", price: 15 },
+              { name: "Pudding", price: 20 },
+              { name: "Whip Cream", price: 25 }
+            ]
+          }
+        });
+        await product.save();
+      }
+      console.log('✅ Sample products created');
+    } else {
+      console.log(`✅ ${productCount} products found in database`);
+    }
   } catch (error) {
-    console.log('Admin setup:', error.message);
+    console.log('Initialization error:', error.message);
   }
 };
 
@@ -300,7 +359,7 @@ const createDefaultAdmin = async () => {
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    createDefaultAdmin();
+    initializeData();
   })
   .catch(err => console.error('❌ MongoDB error:', err));
 
@@ -313,62 +372,7 @@ app.get('/health', (req, res) => {
     message: 'Brewtopia API is healthy! 🚀'
   });
 });
-// ✅ ADD THESE ADMIN PRODUCT ROUTES TO YOUR server/index.js
 
-// Get all products for admin
-app.get('/api/admin/products', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const products = await Product.find();
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Create new product
-app.post('/api/admin/products', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const product = new Product(req.body);
-    await product.save();
-    res.status(201).json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Update product
-app.put('/api/admin/products/:id', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    res.json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Delete product
-app.delete('/api/admin/products/:id', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    res.json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({ 

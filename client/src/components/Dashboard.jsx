@@ -16,6 +16,9 @@ function Dashboard() {
   const [currentView, setCurrentView] = useState('customer');
   const [loading, setLoading] = useState(true);
   const [cartLoading, setCartLoading] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('All');
+
+  const categories = ['All', 'Milk Tea', 'Fruit Tea', 'Coffee', 'Specialty', 'Seasonal'];
 
   useEffect(() => {
     loadProducts();
@@ -40,6 +43,10 @@ function Dashboard() {
       setLoading(false);
     }
   };
+
+  const filteredProducts = activeCategory === 'All' 
+    ? products 
+    : products.filter(product => product.category === activeCategory);
 
   const handleAddToCart = (product) => {
     setSelectedProduct(product);
@@ -108,8 +115,10 @@ function Dashboard() {
   };
 
   const LoadingSpinner = () => (
-    <div className="gradient-spinner">
-      <div className="spinner-circle"></div>
+    <div className="bubble-tea-spinner">
+      <div className="bubble"></div>
+      <div className="bubble"></div>
+      <div className="bubble"></div>
     </div>
   );
 
@@ -117,8 +126,8 @@ function Dashboard() {
     return (
       <div className="admin-layout">
         <div className="admin-header">
-          <button onClick={switchToCustomer} className="back-btn">
-            ← Customer View
+          <button onClick={switchToCustomer} className="back-to-shop-btn">
+            🧋 Back to Shop
           </button>
           <div className="admin-info">
             <span>Welcome, Admin {user.name}</span>
@@ -133,14 +142,15 @@ function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
-      <header className="header">
-        <div className="header-content">
-          <div className="brand">
+    <div className="milk-tea-dashboard">
+      {/* Header */}
+      <header className="tea-shop-header">
+        <div className="header-container">
+          <div className="shop-brand">
             <div className="logo">🧋</div>
             <div className="brand-text">
               <h1>Brewtopia</h1>
-              <span className="tagline">Premium Bubble Tea</span>
+              <span className="tagline">Bubble Tea Paradise</span>
             </div>
           </div>
           
@@ -149,8 +159,8 @@ function Dashboard() {
               <div className="user-info">
                 <span className="welcome-text">Hi, {user.name}! 👋</span>
                 {user.role === 'admin' && (
-                  <button onClick={switchToAdmin} className="admin-btn">
-                    Admin Panel
+                  <button onClick={switchToAdmin} className="admin-panel-btn">
+                    🛠️ Admin Panel
                   </button>
                 )}
                 <button onClick={handleLogout} className="logout-btn">
@@ -159,14 +169,14 @@ function Dashboard() {
               </div>
             ) : (
               <button 
-                className="auth-btn"
+                className="sign-in-btn"
                 onClick={() => setShowAuthModal(true)}
               >
-                Sign In
+                👤 Sign In
               </button>
             )}
             
-            <div className="cart-summary">
+            <div className="cart-section">
               <div className="cart-icon-wrapper">
                 <span className="cart-icon">🛒</span>
                 {cart.length > 0 && (
@@ -179,44 +189,92 @@ function Dashboard() {
         </div>
       </header>
 
-      <main className="main-content">
-        <div className="content-grid">
-          <section className="products-section">
-            <div className="section-header">
-              <h2>Our Signature Drinks</h2>
-              <p>Handcrafted with premium ingredients</p>
+      {/* Main Content */}
+      <main className="shop-main">
+        <div className="shop-container">
+          {/* Categories */}
+          <section className="categories-section">
+            <div className="categories-container">
+              {categories.map(category => (
+                <button
+                  key={category}
+                  className={`category-btn ${activeCategory === category ? 'active' : ''}`}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category === 'All' && '🍹'}
+                  {category === 'Milk Tea' && '🧋'}
+                  {category === 'Fruit Tea' && '🍓'}
+                  {category === 'Coffee' && '☕'}
+                  {category === 'Specialty' && '🌟'}
+                  {category === 'Seasonal' && '🎄'}
+                  {category}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Products Grid */}
+          <section className="products-showcase">
+            <div className="showcase-header">
+              <h2>Our Bubble Tea Collection</h2>
+              <p>Handcrafted with love and premium ingredients</p>
             </div>
 
             {loading ? (
               <div className="loading-state">
                 <LoadingSpinner />
-                <p>Brewing delicious drinks...</p>
+                <p>Brewing your delicious drinks... 🧋</p>
               </div>
             ) : (
-              <div className="products-grid">
-                {products.map(product => (
-                  <div key={product.id} className="product-card">
-                    <div className="product-image">
-                      <span className="product-emoji">{product.image}</span>
+              <div className="tea-products-grid">
+                {filteredProducts.map(product => (
+                  <div key={product._id} className="tea-product-card">
+                    <div className="product-image-container">
+                      {product.image ? (
+                        <img 
+                          src={product.image} 
+                          alt={product.name}
+                          className="product-image"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className="image-fallback">
+                        {product.category === 'Milk Tea' && '🧋'}
+                        {product.category === 'Fruit Tea' && '🍓'}
+                        {product.category === 'Coffee' && '☕'}
+                        {product.category === 'Specialty' && '🌟'}
+                        {product.category === 'Seasonal' && '🎄'}
+                      </div>
                       <div className="product-overlay">
                         <button 
-                          className="quick-add-btn"
+                          className="customize-btn"
                           onClick={() => handleAddToCart(product)}
                         >
-                          Customize & Add
+                          🎨 Customize
                         </button>
                       </div>
+                      <div className="product-badge">
+                        {product.category}
+                      </div>
                     </div>
-                    <div className="product-info">
-                      <h3>{product.name}</h3>
+                    
+                    <div className="product-details">
+                      <h3 className="product-name">{product.name}</h3>
                       <p className="product-description">{product.description}</p>
+                      
                       <div className="product-footer">
-                        <span className="price">₱{product.price}</span>
+                        <div className="price-section">
+                          <span className="product-price">₱{product.price}</span>
+                        </div>
                         <button 
-                          className="add-to-cart-btn"
+                          className="add-to-cart-button"
                           onClick={() => handleAddToCart(product)}
                         >
-                          Add to Cart
+                          <span>Add to Cart</span>
+                          <span className="cart-plus">+</span>
                         </button>
                       </div>
                     </div>
@@ -226,48 +284,65 @@ function Dashboard() {
             )}
           </section>
 
-          <aside className="cart-sidebar">
-            <div className="cart-container">
+          {/* Cart Sidebar */}
+          <aside className="order-sidebar">
+            <div className="cart-panel">
               <div className="cart-header">
                 <h3>Your Order</h3>
-                <div className="items-count">{cart.length} items</div>
+                <div className="order-summary">
+                  <span className="items-count">{cart.length} items</span>
+                  <span className="total-price">₱{getTotalPrice()}</span>
+                </div>
               </div>
 
               {cartLoading ? (
                 <div className="cart-loading">
                   <LoadingSpinner />
-                  <p>Updating cart...</p>
+                  <p>Updating your order...</p>
                 </div>
               ) : cart.length === 0 ? (
-                <div className="empty-cart">
-                  <div className="empty-icon">🧋</div>
-                  <p>Your cart is empty</p>
-                  <span>Add some delicious drinks!</span>
+                <div className="empty-cart-state">
+                  <div className="empty-cart-icon">🧋</div>
+                  <h4>Your cart is empty</h4>
+                  <p>Add some delicious bubble tea!</p>
                 </div>
               ) : (
                 <div className="cart-content">
-                  <div className="cart-items">
+                  <div className="cart-items-list">
                     {cart.map((item, index) => (
-                      <div key={index} className="cart-item">
-                        <div className="item-details">
+                      <div key={index} className="cart-item-card">
+                        <div className="item-info">
                           <div className="item-header">
-                            <strong>{item.name}</strong>
+                            <h4 className="item-name">{item.name}</h4>
                             <span className="item-price">₱{item.finalPrice || item.price}</span>
                           </div>
-                          <div className="customization-info">
-                            <span>{item.customizations.size}</span>
-                            <span>• {item.customizations.sugar} sugar</span>
-                            <span>• {item.customizations.ice} ice</span>
+                          <div className="customization-details">
+                            <div className="customization-item">
+                              <span className="custom-label">Size:</span>
+                              <span>{item.customizations.size}</span>
+                            </div>
+                            <div className="customization-item">
+                              <span className="custom-label">Sugar:</span>
+                              <span>{item.customizations.sugar}</span>
+                            </div>
+                            <div className="customization-item">
+                              <span className="custom-label">Ice:</span>
+                              <span>{item.customizations.ice}</span>
+                            </div>
                             {item.customizations.addons.length > 0 && (
-                              <span>• +{item.customizations.addons.length} add-ons</span>
+                              <div className="customization-item">
+                                <span className="custom-label">Add-ons:</span>
+                                <span>{item.customizations.addons.length} items</span>
+                              </div>
                             )}
                           </div>
                         </div>
                         <button 
-                          className="remove-item-btn"
+                          className="remove-item-button"
                           onClick={() => removeFromCart(index)}
+                          title="Remove item"
                         >
-                          ×
+                          🗑️
                         </button>
                       </div>
                     ))}
@@ -275,15 +350,21 @@ function Dashboard() {
                   
                   <div className="cart-footer">
                     <div className="total-section">
-                      <span className="total-label">Total</span>
-                      <span className="total-amount">₱{getTotalPrice()}</span>
+                      <div className="total-line">
+                        <span>Subtotal</span>
+                        <span>₱{getTotalPrice()}</span>
+                      </div>
+                      <div className="total-line main-total">
+                        <span>Total</span>
+                        <span className="final-price">₱{getTotalPrice()}</span>
+                      </div>
                     </div>
                     <button 
-                      className={`checkout-btn ${!user ? 'checkout-disabled' : ''}`}
+                      className={`checkout-button ${!user ? 'needs-login' : ''}`}
                       onClick={handleCheckout}
                       disabled={!user}
                     >
-                      {user ? 'Proceed to Checkout' : 'Sign In to Checkout'}
+                      {user ? '🥤 Checkout Now' : '🔐 Sign In to Checkout'}
                     </button>
                   </div>
                 </div>
@@ -293,6 +374,7 @@ function Dashboard() {
         </div>
       </main>
 
+      {/* Modals */}
       {selectedProduct && (
         <CustomizationModal
           product={selectedProduct}
@@ -307,6 +389,22 @@ function Dashboard() {
           onLogin={handleLogin}
         />
       )}
+
+      {/* Footer */}
+      <footer className="tea-shop-footer">
+        <div className="footer-content">
+          <div className="footer-brand">
+            <span className="footer-logo">🧋</span>
+            <span className="footer-name">Brewtopia</span>
+          </div>
+          <p className="footer-tagline">Crafting happiness in every cup</p>
+          <div className="footer-info">
+            <span>📍 123 Bubble Tea Street, Manila</span>
+            <span>🕒 Open: 10AM - 10PM</span>
+            <span>📞 (02) 8123-4567</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

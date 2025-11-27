@@ -2,9 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CustomizationModal from './CustomizationModal';
-import AuthModal      from './AuthModal';
+import AuthModal from './AuthModal';
 import AdminDashboard from './AdminDashboard';
-import PaymentModal   from './PaymentModal';
+import PaymentModal from './PaymentModal';
 
 const API_URL = 'https://brewtopia-backend.onrender.com';
 
@@ -22,8 +22,9 @@ export default function Dashboard() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
-  const categories = ['All','Milk Tea','Fruit Tea','Coffee','Specialty','Seasonal'];
+  const categories = ['All', 'Milk Tea', 'Fruit Tea', 'Coffee', 'Specialty', 'Seasonal'];
 
   /* ---------- hooks ---------- */
   useEffect(() => {
@@ -62,7 +63,7 @@ export default function Dashboard() {
           p =>
             p.category === activeCategory &&
             (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-             p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+              p.description.toLowerCase().includes(searchQuery.toLowerCase()))
         );
 
   /* ---------- cart ---------- */
@@ -95,6 +96,7 @@ export default function Dashboard() {
       setCart([]);
       setCartLoading(false);
       setShowPaymentModal(false);
+      setShowMobileCart(false);
     }, 2000);
   };
 
@@ -112,7 +114,7 @@ export default function Dashboard() {
     localStorage.removeItem('brewtopia_token');
   };
   const toAdmin = () => user?.role === 'admin' && setCurrentView('admin');
-  const toShop  = () => setCurrentView('customer');
+  const toShop = () => setCurrentView('customer');
 
   /* ---------- admin ---------- */
   if (currentView === 'admin' && user?.role === 'admin')
@@ -130,6 +132,18 @@ export default function Dashboard() {
           .btnSecondary,.btnDanger{border:none;padding:.6rem 1rem;border-radius:12px;font-weight:600;cursor:pointer}
           .btnSecondary{background:#ffe0f0;color:#d63384}
           .btnDanger{background:#d63384;color:#fff}
+          
+          @media (max-width: 768px) {
+            .adminBar {
+              flex-direction: column;
+              gap: 1rem;
+              padding: 1rem;
+              text-align: center;
+            }
+            .adminBar span {
+              order: -1;
+            }
+          }
         `}</style>
       </div>
     );
@@ -138,6 +152,61 @@ export default function Dashboard() {
   const Spinner = () => (
     <div className="spinner">
       <div /><div /><div />
+    </div>
+  );
+
+  /* ---------- Mobile Cart Button ---------- */
+  const MobileCartButton = () => (
+    <div className="mobileCartButton" onClick={() => setShowMobileCart(true)}>
+      <span>🛒 {cart.length}</span>
+      <span>₱{total}</span>
+    </div>
+  );
+
+  /* ---------- Mobile Cart Sidebar ---------- */
+  const MobileCartSidebar = () => (
+    <div className={`mobileCartSidebar ${showMobileCart ? 'active' : ''}`}>
+      <div className="mobileCartHeader">
+        <h2>Your Order</h2>
+        <button className="closeButton" onClick={() => setShowMobileCart(false)}>×</button>
+      </div>
+      <div className="mobileCartContent">
+        {cartLoading ? (
+          <Spinner />
+        ) : cart.length === 0 ? (
+          <div className="empty">
+            <div>🧋</div>
+            <p>Your cart is empty</p>
+            <small>Add some drinks to get started</small>
+          </div>
+        ) : (
+          <>
+            {cart.map((it, idx) => (
+              <div className="itemRow" key={idx}>
+                <div>
+                  <strong>{it.name}</strong>
+                  <div className="customizations">
+                    {it.customizations.size} · {it.customizations.sugar} · {it.customizations.ice}
+                  </div>
+                </div>
+                <div className="itemActions">
+                  <span className="price">₱{it.finalPrice || it.price}</span>
+                  <button className="remove" onClick={() => remove(idx)}>×</button>
+                </div>
+              </div>
+            ))}
+
+            <div className="summary">
+              <span>Total</span>
+              <span className="price">₱{total}</span>
+            </div>
+
+            <button className="btn btnPrimary checkout" disabled={!user} onClick={checkout}>
+              {user ? 'Proceed to Payment' : 'Sign In to Checkout'}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 
@@ -158,34 +227,46 @@ export default function Dashboard() {
         }
         *{box-sizing:border-box;margin:0;font-family:'Quicksand',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}
         body{background:var(--bg);color:var(--text)}
+        
+        /* Top Bar */
         .topBar{
           position:sticky;top:0;left:0;right:0;
           background:#fff;border-bottom:2px solid var(--light);
           display:flex;align-items:center;justify-content:space-between;
-          padding:1rem 2rem;z-index:10;
+          padding:1rem 2rem;z-index:100;
+          transition: all 0.3s ease;
         }
         .topBar.scrolled{box-shadow:var(--shadow)}
+        
         .logo{font-size:2.2rem;font-weight:800;display:flex;align-items:center;gap:.5rem;letter-spacing:-1px;color:var(--pink)}
         .logo span{font-size:2.8rem}
+        
         .search input{
           border:2px solid var(--light);border-radius:var(--radius);padding:.7rem 1.2rem;
           width:280px;font-size:1.1rem;
         }
+        
         .topActions{display:flex;align-items:center;gap:1rem}
         .cartTag{
           background:var(--pink);color:#fff;
           padding:.6rem 1.2rem;border-radius:var(--radius);
           font-weight:700;font-size:1.1rem;cursor:pointer;
         }
+        
+        /* Main Layout */
         .wrapper{display:flex;gap:2rem;padding:2rem;max-width:1400px;margin:auto}
         aside{width:420px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.8rem;height:fit-content;position:sticky;top:110px}
         main{flex:1}
+        
+        /* Categories */
         .pills{display:flex;gap:.8rem;margin-bottom:1.8rem;flex-wrap:wrap}
         .pill{
           border:2px solid var(--light);background:#fff;padding:.6rem 1.3rem;border-radius:999px;
           font-size:1.1rem;font-weight:600;cursor:pointer;transition:.2s;
         }
         .pill.active{background:var(--pink);color:#fff;border-color:var(--pink)}
+        
+        /* Products Grid */
         .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.8rem}
         .product{
           background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
@@ -198,12 +279,16 @@ export default function Dashboard() {
         .productBody p{font-size:1rem;color:var(--muted);margin-bottom:.8rem;flex:1}
         .productFooter{display:flex;align-items:center;justify-content:space-between;margin-top:.8rem}
         .price{font-weight:800;color:var(--pink);font-size:1.3rem}
+        
+        /* Buttons */
         .btn{
           border:none;padding:.7rem 1.3rem;border-radius:var(--radius);
           font-weight:700;font-size:1.1rem;cursor:pointer;transition:.2s;
         }
         .btnPrimary{background:var(--pink);color:#fff}
         .btn:disabled{opacity:.5;cursor:not-allowed}
+        
+        /* Cart */
         .empty{text-align:center;padding:3rem 1rem;color:var(--muted)}
         .empty div{font-size:3rem}
         .itemRow{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-bottom:1px solid #fce4f0}
@@ -211,14 +296,279 @@ export default function Dashboard() {
         .remove{background:none;border:none;font-size:1.6rem;color:#bbb;cursor:pointer}
         .summary{border-top:2px solid #fce4f0;margin-top:1.2rem;padding-top:1.2rem;display:flex;justify-content:space-between;align-items:center;font-size:1.3rem;font-weight:800}
         .checkout{width:100%;margin-top:1.2rem;font-size:1.2rem;padding:.9rem}
+        
+        /* Spinner */
         .spinner{display:flex;gap:.4rem;justify-content:center;padding:3rem 0}
         .spinner div{width:12px;height:12px;background:var(--pink);border-radius:50%;animation:bounce .6s infinite alternate}
         .spinner div:nth-child(2){animation-delay:.15s}
         .spinner div:nth-child(3){animation-delay:.3s}
         @keyframes bounce{to{transform:translateY(-8px)}}
-        @media(max-width:900px){
-          .wrapper{flex-direction:column}
-          aside{width:100%;position:static}
+        
+        /* Mobile Cart Button */
+        .mobileCartButton{
+          display: none;
+          position: fixed;
+          bottom: 2rem;
+          right: 2rem;
+          background: var(--pink);
+          color: white;
+          padding: 1rem 1.5rem;
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+          z-index: 90;
+          cursor: pointer;
+          font-weight: 700;
+          gap: 0.5rem;
+          align-items: center;
+        }
+        
+        /* Mobile Cart Sidebar */
+        .mobileCartSidebar{
+          position: fixed;
+          top: 0;
+          right: -100%;
+          width: 100%;
+          height: 100%;
+          background: white;
+          z-index: 1000;
+          transition: right 0.3s ease;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .mobileCartSidebar.active{
+          right: 0;
+        }
+        
+        .mobileCartHeader{
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1.5rem;
+          border-bottom: 2px solid var(--light);
+          background: white;
+        }
+        
+        .mobileCartHeader h2{
+          margin: 0;
+          color: var(--pink);
+        }
+        
+        .closeButton{
+          background: none;
+          border: none;
+          font-size: 2.5rem;
+          cursor: pointer;
+          color: var(--muted);
+          line-height: 1;
+        }
+        
+        .mobileCartContent{
+          flex: 1;
+          padding: 1.5rem;
+          overflow-y: auto;
+        }
+        
+        .customizations{
+          font-size: .9rem;
+          color: var(--muted);
+        }
+        
+        .itemActions{
+          display: flex;
+          align-items: center;
+          gap: .7rem;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+          .wrapper {
+            padding: 1.5rem;
+            gap: 1.5rem;
+          }
+          aside {
+            width: 380px;
+          }
+        }
+        
+        @media (max-width: 900px) {
+          .wrapper {
+            flex-direction: column;
+          }
+          aside {
+            width: 100%;
+            position: static;
+            display: none; /* Hide desktop cart on mobile */
+          }
+          
+          .mobileCartButton {
+            display: flex;
+          }
+          
+          .grid {
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.2rem;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          :root {
+            font-size: 16px;
+          }
+          
+          .topBar {
+            padding: 0.8rem 1rem;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+          }
+          
+          .logo {
+            font-size: 1.8rem;
+            order: 1;
+          }
+          
+          .logo span {
+            font-size: 2.2rem;
+          }
+          
+          .search {
+            order: 3;
+            flex: 1 1 100%;
+          }
+          
+          .search input {
+            width: 100%;
+            font-size: 1rem;
+            padding: 0.6rem 1rem;
+          }
+          
+          .topActions {
+            order: 2;
+            gap: 0.6rem;
+          }
+          
+          .cartTag {
+            display: none; /* Hide desktop cart tag on mobile */
+          }
+          
+          .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+          }
+          
+          .wrapper {
+            padding: 1rem;
+          }
+          
+          .pills {
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
+          }
+          
+          .pill {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+          }
+          
+          .grid {
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+          }
+          
+          .product img {
+            height: 140px;
+          }
+          
+          .productBody {
+            padding: 1rem;
+          }
+          
+          .productBody h3 {
+            font-size: 1.1rem;
+          }
+          
+          .productBody p {
+            font-size: 0.85rem;
+          }
+          
+          .price {
+            font-size: 1.1rem;
+          }
+          
+          .mobileCartButton {
+            bottom: 1rem;
+            right: 1rem;
+            padding: 0.8rem 1.2rem;
+            font-size: 0.9rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .topBar {
+            padding: 0.6rem 0.8rem;
+          }
+          
+          .logo {
+            font-size: 1.5rem;
+          }
+          
+          .logo span {
+            font-size: 1.8rem;
+          }
+          
+          .topActions span {
+            display: none; /* Hide username on very small screens */
+          }
+          
+          .grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+          }
+          
+          .productBody {
+            padding: 0.8rem;
+          }
+          
+          .productBody h3 {
+            font-size: 1rem;
+          }
+          
+          .productBody p {
+            font-size: 0.8rem;
+          }
+          
+          .btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+          }
+          
+          .price {
+            font-size: 1rem;
+          }
+          
+          .mobileCartButton {
+            bottom: 0.8rem;
+            right: 0.8rem;
+            padding: 0.7rem 1rem;
+          }
+          
+          .mobileCartHeader {
+            padding: 1rem;
+          }
+          
+          .mobileCartContent {
+            padding: 1rem;
+          }
+        }
+        
+        @media (max-width: 360px) {
+          .grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .pills {
+            justify-content: center;
+          }
         }
       `}</style>
 
@@ -287,8 +637,8 @@ export default function Dashboard() {
           )}
         </main>
 
-        {/* YOUR ORDER */}
-        <aside>
+        {/* DESKTOP ORDER SIDEBAR (Hidden on mobile) */}
+        <aside className="desktopCart">
           <h2 style={{ marginBottom: '.8rem' }}>Your Order</h2>
           {cartLoading ? (
             <Spinner />
@@ -327,6 +677,12 @@ export default function Dashboard() {
           )}
         </aside>
       </div>
+
+      {/* MOBILE CART BUTTON */}
+      <MobileCartButton />
+
+      {/* MOBILE CART SIDEBAR */}
+      <MobileCartSidebar />
 
       {/* MODALS */}
       {selectedProduct && (

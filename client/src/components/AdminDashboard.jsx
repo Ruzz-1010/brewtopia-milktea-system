@@ -1,722 +1,295 @@
-// AdminDashboard.jsx - COMPLETE WORKING VERSION
+/* AdminDashboard.jsx  –  100 % responsive  */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './AdminDashboard.css';
 
 const API_URL = 'https://brewtopia-backend.onrender.com';
 
-function AdminDashboard() {
-  const [products, setProducts] = useState([]);
-  const [orders, setOrders] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [loading, setLoading] = useState(true);
-  const [showProductForm, setShowProductForm] = useState(false);
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    price: '',
-    description: '',
-    category: 'Milk Tea',
-    image: ''
-  });
-  const [editingProduct, setEditingProduct] = useState(null);
+export default function AdminDashboard() {
+  /* ---------- state ---------- */
+  const [products, setProducts]   = useState([]);
+  const [orders, setOrders]       = useState([]);
+  const [users, setUsers]         = useState([]);
+  const [tab, setTab]             = useState('dashboard');
+  const [loading, setLoading]     = useState(true);
+  const [showForm, setShowForm]   = useState(false);
+  const [editing, setEditing]     = useState(null);
 
-  // Load all data
-  useEffect(() => {
-    loadData();
-  }, []);
+  const blank = { name:'', price:'', description:'', category:'Milk Tea', image:'' };
+  const [form, setForm] = useState(blank);
 
-  const loadData = async () => {
+  /* ---------- hooks ---------- */
+  useEffect(() => { loadAll(); }, []);
+
+  const loadAll = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Load products
-      const productsRes = await axios.get(`${API_URL}/api/products`);
-      setProducts(productsRes.data || []);
-
-      // Load orders
-      try {
-        const ordersRes = await axios.get(`${API_URL}/api/orders`);
-        setOrders(ordersRes.data || []);
-      } catch (error) {
-        console.log('Orders load error:', error);
-        setOrders([]);
-      }
-
-      // Load users  
-      try {
-        const usersRes = await axios.get(`${API_URL}/api/users`);
-        setUsers(usersRes.data || []);
-      } catch (error) {
-        console.log('Users load error:', error);
-        setUsers([]);
-      }
-
-    } catch (error) {
-      console.log('Main data load error:', error);
-    } finally {
-      setLoading(false);
-    }
+      const [pro, ord, usr] = await Promise.all([
+        axios.get(`${API_URL}/api/products`).then(r=>r.data).catch(()=>[]),
+        axios.get(`${API_URL}/api/orders`).then(r=>r.data).catch(()=>[]),
+        axios.get(`${API_URL}/api/users`).then(r=>r.data).catch(()=>[])
+      ]);
+      setProducts(pro); setOrders(ord); setUsers(usr);
+    } finally { setLoading(false); }
   };
 
-  // ADD PRODUCT - WORKING
-  const addProduct = async (e) => {
+  /* ---------- helpers ---------- */
+  const toast = (m) => alert(m);
+  const fmt   = (d) => d ? new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) : 'N/A';
+  const revenue = orders.filter(o=> o.status==='completed'||o.status==='ready').reduce((a,o)=>a+(o.totalAmount||0),0);
+  const pending = orders.filter(o=> o.status==='pending').length;
+
+  /* ---------- products ---------- */
+  const saveProduct = async (e) => {
     e.preventDefault();
-    
-    if (!newProduct.name || !newProduct.price) {
-      alert('Please fill in name and price');
-      return;
-    }
-
+    if (!form.name||!form.price) return toast('Name & price required');
+    const payload = {...form, price:Number(form.price)};
     try {
-      const productData = {
-        name: newProduct.name,
-        price: Number(newProduct.price),
-        description: newProduct.description || 'Delicious bubble tea',
-        category: newProduct.category,
-        image: newProduct.image || 'https://images.unsplash.com/photo-1563245372-f21724e3856d?w=400&h=300&fit=crop',
-        customizations: {
-          sizes: [
-            { name: "Regular", price: 0 },
-            { name: "Large", price: 20 }
-          ],
-          sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
-          iceLevels: ["No Ice", "Less Ice", "Regular Ice"]
-        }
-      };
-
-      console.log('Adding product:', productData);
-
-      let response;
-      try {
-        // Try admin endpoint first
-        response = await axios.post(`${API_URL}/api/admin/products`, productData);
-      } catch (adminError) {
-        console.log('Admin endpoint failed, trying regular endpoint...');
-        // Fallback to regular endpoint
-        response = await axios.post(`${API_URL}/api/products`, productData);
+      if (editing){
+        await axios.put(`${API_URL}/api/admin/products/${editing._id}`,payload);
+        toast('Updated ✔️');
+      }else{
+        await axios.post(`${API_URL}/api/admin/products`,{...payload,customizations:{
+          sizes:[{name:'Regular',price:0},{name:'Large',price:20}],
+          sugarLevels:['0%','25%','50%','75%','100%'],
+          iceLevels:['No Ice','Less Ice','Regular Ice']
+        }});
+        toast('Added ✔️');
       }
-
-      console.log('Product added successfully:', response.data);
-      
-      // Reset and reload
-      setNewProduct({
-        name: '',
-        price: '',
-        description: '',
-        category: 'Milk Tea',
-        image: ''
-      });
-      setShowProductForm(false);
-      loadData();
-      
-      alert('✅ Product added successfully!');
-
-    } catch (error) {
-      console.error('Error adding product:', error);
-      alert('❌ Error adding product: ' + (error.response?.data?.message || error.message));
-    }
+      closeForm(); loadAll();
+    }catch{ toast('Failed ❌'); }
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); setForm(blank); };
+  const editProduct = (p) => { setEditing(p); setForm(p); setShowForm(true); };
+  const delProduct = async (id) => {
+    if (!window.confirm('Delete product?')) return;
+    await axios.delete(`${API_URL}/api/admin/products/${id}`); loadAll(); toast('Deleted ✔️');
   };
 
-  // EDIT PRODUCT - WORKING
-  const startEditProduct = (product) => {
-    setEditingProduct(product);
-    setNewProduct({
-      name: product.name,
-      price: product.price,
-      description: product.description,
-      category: product.category,
-      image: product.image
-    });
-    setShowProductForm(true);
+  /* ---------- orders ---------- */
+  const statusList = ['pending','confirmed','preparing','ready','completed','cancelled'];
+  const chgStatus = async (id,st) => {
+    await axios.put(`${API_URL}/api/admin/orders/${id}/status`,{status:st}); loadAll();
   };
 
-  const updateProduct = async (e) => {
-    e.preventDefault();
-    
-    if (!newProduct.name || !newProduct.price) {
-      alert('Please fill in name and price');
-      return;
-    }
-
-    try {
-      const productData = {
-        name: newProduct.name,
-        price: Number(newProduct.price),
-        description: newProduct.description,
-        category: newProduct.category,
-        image: newProduct.image
-      };
-
-      console.log('Updating product:', editingProduct._id, productData);
-
-      let response;
-      try {
-        response = await axios.put(`${API_URL}/api/admin/products/${editingProduct._id}`, productData);
-      } catch (adminError) {
-        response = await axios.put(`${API_URL}/api/products/${editingProduct._id}`, productData);
-      }
-
-      console.log('Product updated successfully:', response.data);
-      
-      setEditingProduct(null);
-      setShowProductForm(false);
-      loadData();
-      
-      alert('✅ Product updated successfully!');
-
-    } catch (error) {
-      console.error('Error updating product:', error);
-      alert('❌ Error updating product: ' + (error.response?.data?.message || error.message));
-    }
+  /* ---------- users ---------- */
+  const chgRole = async (uid,role) => { await axios.put(`${API_URL}/api/admin/users/${uid}/role`,{role}); loadAll(); };
+  const delUser = async (uid) => {
+    if (!window.confirm('Delete user?')) return;
+    await axios.delete(`${API_URL}/api/admin/users/${uid}`); loadAll(); toast('Deleted ✔️');
   };
 
-  // DELETE PRODUCT - WORKING
-  const deleteProduct = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
-
-    try {
-      console.log('Deleting product:', productId);
-      
-      try {
-        await axios.delete(`${API_URL}/api/admin/products/${productId}`);
-      } catch (adminError) {
-        await axios.delete(`${API_URL}/api/products/${productId}`);
-      }
-
-      loadData();
-      alert('✅ Product deleted successfully!');
-
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      alert('❌ Error deleting product: ' + (error.response?.data?.message || error.message));
-    }
-  };
-
-  // UPDATE ORDER STATUS - WORKING
-  const updateOrderStatus = async (orderId, newStatus) => {
-    try {
-      console.log('Updating order status:', orderId, newStatus);
-      
-      try {
-        await axios.put(`${API_URL}/api/admin/orders/${orderId}/status`, { status: newStatus });
-      } catch (adminError) {
-        await axios.put(`${API_URL}/api/orders/${orderId}/status`, { status: newStatus });
-      }
-
-      loadData();
-      
-    } catch (error) {
-      console.error('Error updating order:', error);
-      alert('❌ Error updating order status');
-    }
-  };
-
-  // UPDATE USER ROLE - WORKING
-  const updateUserRole = async (userId, newRole) => {
-    try {
-      console.log('Updating user role:', userId, newRole);
-      
-      await axios.put(`${API_URL}/api/admin/users/${userId}/role`, { role: newRole });
-      loadData();
-      alert('✅ User role updated!');
-      
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      alert('❌ Error updating user role');
-    }
-  };
-
-  // DELETE USER - WORKING
-  const deleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) return;
-
-    try {
-      console.log('Deleting user:', userId);
-      
-      await axios.delete(`${API_URL}/api/admin/users/${userId}`);
-      loadData();
-      alert('✅ User deleted successfully!');
-
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      alert('❌ Error deleting user');
-    }
-  };
-
-  // CALCULATIONS
-  const totalRevenue = orders
-    .filter(order => order.status === 'completed' || order.status === 'ready')
-    .reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-
-  const pendingOrders = orders.filter(order => order.status === 'pending').length;
-  const customerUsers = users.filter(user => user.role === 'customer').length;
-  const adminUsers = users.filter(user => user.role === 'admin').length;
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-PH', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="bubble-tea-spinner">
-          <div className="bubble"></div>
-          <div className="bubble"></div>
-          <div className="bubble"></div>
-        </div>
-        <h2>Loading Dashboard... 🧋</h2>
-        <p>Please wait while we load your data</p>
+  /* ---------- loader ---------- */
+  if (loading) return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100vh',fontSize:'1.5rem',gap:'1rem'}}>
+      <div style={{display:'flex',gap:'.5rem'}}>
+        {[0,1,2].map(i=> <span key={i} style={{width:'12px',height:'12px',background:'#d63384',borderRadius:'50%',animation:'bounce .6s infinite alternate',animationDelay:i*0.15+'s'}}/>)}
       </div>
-    );
-  }
+      Loading dashboard…
+      <style>{`@keyframes bounce{to{transform:translateY(-8px)}}`}</style>
+    </div>
+  );
 
+  /* ---------- jsx ---------- */
   return (
-    <div className="admin-dashboard">
-      {/* Product Form Modal */}
-      {showProductForm && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
-              <button 
-                onClick={() => {
-                  setShowProductForm(false);
-                  setEditingProduct(null);
-                  setNewProduct({
-                    name: '',
-                    price: '',
-                    description: '',
-                    category: 'Milk Tea',
-                    image: ''
-                  });
-                }}
-                className="close-btn"
-              >
-                ✕
-              </button>
-            </div>
+    <>
+      <style>{`
+        :root{ --pink:#d63384; --light:#ffe8f1; --bg:#fff8fb; --card:#fff; --text:#333; --muted:#777; --radius:16px; --shadow:0 4px 20px rgba(0,0,0,.06); }
+        *{box-sizing:border-box;margin:0;font-family:'Quicksand',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial;}
+        body{background:var(--bg);color:var(--text);}
+        h1,h2,h3{letter-spacing:-.5px}
+        .topBar{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;background:var(--card);box-shadow:var(--shadow);}
+        .tabs{display:flex;gap:.5rem;overflow-x:auto;padding:1rem 2rem;}
+        .tab{padding:.6rem 1.2rem;border:2px solid var(--light);background:#fff;border-radius:999px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.2s}
+        .tab.active{background:var(--pink);color:#fff;border-color:var(--pink)}
+        .badge{background:var(--pink);color:#fff;font-size:.7rem;padding:.15rem .4rem;border-radius:999px;margin-left:.4rem}
+        .content{padding:2rem;max-width:1400px;margin:auto}
+        .grid{display:grid;gap:1.5rem}
+        .statCard{background:var(--card);padding:1.5rem;border-radius:var(--radius);box-shadow:var(--shadow);text-align:center}
+        .statCard .ico{font-size:2.2rem;margin-bottom:.5rem}
+        .statCard .num{font-size:2rem;font-weight:700;color:var(--pink)}
+        .statCard .lbl{color:var(--muted)}
+        .btn{border:none;padding:.6rem 1rem;border-radius:var(--radius);font-weight:600;cursor:pointer;transition:.2s}
+        .btnPrim{background:var(--pink);color:#fff}
+        .btnSec{background:var(--light);color:var(--pink)}
+        .btnDanger{background:#ff4d4f;color:#fff}
+        .btn:hover{opacity:.9}
+        .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.2rem}
+        .row{display:flex;flex-wrap:wrap;gap:1.5rem;margin-bottom:1.5rem}
+        .row>*{flex:1 1 240px}
+        table{width:100%;border-collapse:collapse;font-size:1rem}
+        th,td{padding:.75rem 1rem;text-align:left;border-bottom:1px solid var(--light)}
+        th{color:var(--muted);font-weight:600}
+        select{border:1px solid var(--light);padding:.4rem;border-radius:8px;background:#fff}
+        .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:999;padding:1rem}
+        .modalBox{background:var(--card);border-radius:var(--radius);width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:2rem}
+        .modalHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem}
+        .close{background:none;border:none;font-size:1.5rem;cursor:pointer}
+        .formGroup{margin-bottom:1rem}
+        .formGroup label{display:block;margin-bottom:.4rem;font-weight:600}
+        .formGroup input,.formGroup textarea,.formGroup select{width:100%;padding:.65rem;border:2px solid var(--light);border-radius:var(--radius);font-size:1rem}
+        .formGroup textarea{resize:vertical;min-height:90px}
+        .formActions{display:flex;gap:1rem;justify-content:flex-end;margin-top:1.2rem}
+        @media(max-width:900px){
+          .topBar,.tabs,.content{padding:1rem}
+          .tabs{gap:.3rem}
+          .tab{padding:.5rem .9rem;font-size:.95rem}
+          .row{gap:1rem}
+          table{font-size:.9rem}
+          th,td{padding:.6rem .7rem}
+        }
+      `}</style>
 
-            <form onSubmit={editingProduct ? updateProduct : addProduct}>
-              <div className="form-group">
-                <label>Product Name *</label>
-                <input
-                  type="text"
-                  value={newProduct.name}
-                  onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                  placeholder="e.g., Classic Milk Tea"
-                  required
-                />
-              </div>
+      {/* ------- HEADER ------- */}
+      <header className="topBar">
+        <h1 style={{fontSize:'1.8rem',color:'var(--pink)'}}>🧋 Brewtopia Admin</h1>
+        <button className="btn btnSec" onClick={loadAll}>🔄 Refresh</button>
+      </header>
 
-              <div className="form-group">
-                <label>Price (₱) *</label>
-                <input
-                  type="number"
-                  value={newProduct.price}
-                  onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
-                  placeholder="120"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Category *</label>
-                <select
-                  value={newProduct.category}
-                  onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                >
-                  <option value="Milk Tea">Milk Tea</option>
-                  <option value="Fruit Tea">Fruit Tea</option>
-                  <option value="Coffee">Coffee</option>
-                  <option value="Specialty">Specialty</option>
-                  <option value="Seasonal">Seasonal</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={newProduct.description}
-                  onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
-                  placeholder="Describe your product..."
-                  rows="3"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Image URL (optional)</label>
-                <input
-                  type="url"
-                  value={newProduct.image}
-                  onChange={(e) => setNewProduct({...newProduct, image: e.target.value})}
-                  placeholder="https://example.com/image.jpg"
-                />
-                {newProduct.image && (
-                  <div className="image-preview">
-                    <img src={newProduct.image} alt="Preview" />
-                  </div>
-                )}
-              </div>
-
-              <div className="form-actions">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowProductForm(false);
-                    setEditingProduct(null);
-                  }}
-                  className="btn-cancel"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-save"
-                >
-                  {editingProduct ? 'Update Product' : 'Add Product'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="admin-header">
-        <h1>🧋 Brewtopia Admin</h1>
-        <button onClick={loadData} className="refresh-btn">
-          🔄 Refresh Data
-        </button>
-      </div>
-
-      {/* Tabs */}
-      <div className="tabs-container">
-        {['dashboard', 'products', 'orders', 'users'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            {tab === 'orders' && pendingOrders > 0 && (
-              <span className="tab-badge">{pendingOrders}</span>
-            )}
-            {tab === 'products' && (
-              <span className="tab-badge">{products.length}</span>
-            )}
-            {tab === 'users' && (
-              <span className="tab-badge">{users.length}</span>
-            )}
+      {/* ------- TABS ------- */}
+      <div className="tabs">
+        {['dashboard','products','orders','users'].map(t=>(
+          <button key={t} className={`tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+            {t.charAt(0).toUpperCase()+t.slice(1)}
+            {t==='orders'&&!!pending&&<span className="badge">{pending}</span>}
+            {t==='products'&&<span className="badge">{products.length}</span>}
+            {t==='users'&&<span className="badge">{users.length}</span>}
           </button>
         ))}
       </div>
 
-      {/* Main Content */}
-      <div className="main-content">
-        
-        {/* DASHBOARD TAB */}
-        {activeTab === 'dashboard' && (
-          <div className="dashboard-tab">
-            <h2>Dashboard Overview</h2>
-            
-            {/* Stats Grid */}
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-icon">🥤</div>
-                <div className="stat-number">{products.length}</div>
-                <div className="stat-label">Total Products</div>
-              </div>
+      {/* ------- CONTENT ------- */}
+      <div className="content">
 
-              <div className="stat-card">
-                <div className="stat-icon">🛒</div>
-                <div className="stat-number">{orders.length}</div>
-                <div className="stat-label">Total Orders</div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon">💰</div>
-                <div className="stat-number">₱{totalRevenue.toLocaleString()}</div>
-                <div className="stat-label">Total Revenue</div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon">👥</div>
-                <div className="stat-number">{users.length}</div>
-                <div className="stat-label">Total Users</div>
-                <div className="stat-subtext">{customerUsers} customers, {adminUsers} admins</div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="action-section">
-              <h3>Quick Actions</h3>
-              <div className="action-buttons">
-                <button 
-                  onClick={() => setShowProductForm(true)}
-                  className="action-btn primary"
-                >
-                  + Add New Product
-                </button>
-                <button onClick={loadData} className="action-btn secondary">
-                  🔄 Refresh Data
-                </button>
-              </div>
-            </div>
-
-            {/* Recent Orders */}
-            <div className="recent-section">
-              <div className="section-header">
-                <h3>Recent Orders</h3>
-                <span className="pending-count">{pendingOrders} pending</span>
-              </div>
-
-              {orders.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">🛒</div>
-                  <p>No orders yet</p>
-                </div>
-              ) : (
-                <div className="orders-list">
-                  {orders.slice(0, 5).map(order => (
-                    <div key={order._id} className="order-item">
-                      <div className="order-info">
-                        <div className="order-main">
-                          <strong>Order #{order.orderNumber || order._id?.slice(-6)}</strong>
-                          <span>{order.customer?.name || 'N/A'}</span>
-                        </div>
-                        <div className="order-details">
-                          <span className="amount">₱{order.totalAmount || 0}</span>
-                          <span className="date">{formatDate(order.orderDate)}</span>
-                        </div>
-                      </div>
-                      <select 
-                        value={order.status || 'pending'}
-                        onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                        className="status-select"
-                      >
-                        <option value="pending">⏳ Pending</option>
-                        <option value="confirmed">✅ Confirmed</option>
-                        <option value="preparing">👨‍🍳 Preparing</option>
-                        <option value="ready">🥤 Ready</option>
-                        <option value="completed">📦 Completed</option>
-                        <option value="cancelled">❌ Cancelled</option>
-                      </select>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+        {/* DASHBOARD */}
+        {tab==='dashboard'&&<>
+          <h2 style={{marginBottom:'1.2rem'}}>Dashboard Overview</h2>
+          <div className="row">
+            <div className="statCard"><div className="ico">🥤</div><div className="num">{products.length}</div><div className="lbl">Products</div></div>
+            <div className="statCard"><div className="ico">🛒</div><div className="num">{orders.length}</div><div className="lbl">Orders</div></div>
+            <div className="statCard"><div className="ico">💰</div><div className="num">₱{revenue.toLocaleString()}</div><div className="lbl">Revenue</div></div>
+            <div className="statCard"><div className="ico">👥</div><div className="num">{users.length}</div><div className="lbl">Users</div></div>
           </div>
-        )}
+          <div style={{display:'flex',gap:'.75rem',marginBottom:'2rem'}}>
+            <button className="btn btnPrim" onClick={()=>{setEditing(null);setForm(blank);setShowForm(true)}}>+ Add Product</button>
+            <button className="btn btnSec" onClick={loadAll}>Refresh All</button>
+          </div>
+          <h3>Recent Orders</h3>
+          {orders.length===0
+            ?<div className="card empty" style={{textAlign:'center',color:'var(--muted)'}}>No orders yet</div>
+            :<div className="grid" style={{gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))'}}>
+              {orders.slice(0,5).map(o=>(
+                <div className="card" key={o._id}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <strong>#{o.orderNumber||o._id.slice(-6)}</strong>
+                    <select value={o.status||'pending'} onChange={e=>chgStatus(o._id,e.target.value)} style={{fontSize:'.85rem'}}>
+                      {statusList.map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div style={{color:'var(--muted)',fontSize:'.9rem',marginTop:'.3rem'}}>{o.customer?.name||'N/A'} · ₱{o.totalAmount||0} · {fmt(o.orderDate)}</div>
+                </div>
+              ))}
+             </div>}
+        </>}
 
-        {/* PRODUCTS TAB */}
-        {activeTab === 'products' && (
-          <div className="products-tab">
-            <div className="tab-header">
-              <h2>Product Management</h2>
-              <button 
-                onClick={() => setShowProductForm(true)}
-                className="add-product-btn"
-              >
-                + Add New Product
-              </button>
-            </div>
-
-            {products.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">🧋</div>
-                <h3>No Products Yet</h3>
-                <p>Start by adding your first product to the menu!</p>
-                <button 
-                  onClick={() => setShowProductForm(true)}
-                  className="cta-button"
-                >
-                  + Add Your First Product
-                </button>
-              </div>
-            ) : (
-              <div className="products-grid">
-                {products.map(product => (
-                  <div key={product._id} className="product-card">
-                    <div className="product-image">
-                      {product.image ? (
-                        <img src={product.image} alt={product.name} />
-                      ) : (
-                        <div className="image-placeholder">🧋</div>
-                      )}
-                      <div className="product-badge">{product.category}</div>
-                    </div>
-                    
-                    <div className="product-info">
-                      <h3>{product.name}</h3>
-                      <p className="product-description">
-                        {product.description || 'No description available'}
-                      </p>
-                      <div className="product-meta">
-                        <span className="product-price">₱{product.price}</span>
-                        <span className="product-category">{product.category}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="product-actions">
-                      <button 
-                        onClick={() => startEditProduct(product)}
-                        className="btn-edit"
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button 
-                        onClick={() => deleteProduct(product._id)}
-                        className="btn-delete"
-                      >
-                        🗑️ Delete
-                      </button>
+        {/* PRODUCTS */}
+        {tab==='products'&&<>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.2rem'}}>
+            <h2>Products ({products.length})</h2>
+            <button className="btn btnPrim" onClick={()=>{setEditing(null);setForm(blank);setShowForm(true)}}>+ Add Product</button>
+          </div>
+          {products.length===0
+            ?<div className="card empty" style={{textAlign:'center'}}>No products yet<br/><button className="btn btnPrim" style={{marginTop:'.8rem'}} onClick={()=>setShowForm(true)}>Add First Product</button></div>
+            :<div className="grid" style={{gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))'}}>
+              {products.map(p=>(
+                <div className="card" key={p._id}>
+                  <img src={p.image||'https://cdn-icons-png.flaticon.com/512/3075/3075977.png'} alt={p.name} style={{width:'100%',height:140,objectFit:'cover',borderRadius:'8px',marginBottom:'.6rem'}}/>
+                  <h3 style={{fontSize:'1.2rem'}}>{p.name}</h3>
+                  <p style={{fontSize:'.9rem',color:'var(--muted)',minHeight:'40px'}}>{p.description||'No description'}</p>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'.6rem'}}>
+                    <span className="price" style={{fontWeight:700,color:'var(--pink)',fontSize:'1.1rem'}}>₱{p.price}</span>
+                    <div style={{display:'flex',gap:'.4rem'}}>
+                      <button className="btn btnSec" onClick={()=>editProduct(p)}>✏️ Edit</button>
+                      <button className="btn btnDanger" onClick={()=>delProduct(p._id)}>🗑️</button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ORDERS TAB */}
-        {activeTab === 'orders' && (
-          <div className="orders-tab">
-            <div className="tab-header">
-              <h2>Order Management ({orders.length} orders)</h2>
-            </div>
-
-            {orders.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">🛒</div>
-                <h3>No Orders Yet</h3>
-                <p>Orders will appear here when customers place them</p>
-              </div>
-            ) : (
-              <div className="orders-table">
-                <div className="table-header">
-                  <div>Order #</div>
-                  <div>Customer</div>
-                  <div>Items</div>
-                  <div>Total</div>
-                  <div>Status</div>
-                  <div>Date</div>
                 </div>
-                <div className="table-body">
-                  {orders.map(order => (
-                    <div key={order._id} className="table-row">
-                      <div className="order-number">
-                        #{order.orderNumber || order._id?.slice(-6)}
-                      </div>
-                      <div className="customer">
-                        {order.customer?.name || 'N/A'}
-                        {order.customer?.email && (
-                          <div className="customer-email">{order.customer.email}</div>
-                        )}
-                      </div>
-                      <div className="items">
-                        {order.items?.length || 0} items
-                      </div>
-                      <div className="total">
-                        ₱{order.totalAmount || 0}
-                      </div>
-                      <div className="status">
-                        <select 
-                          value={order.status || 'pending'}
-                          onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                          className="status-select"
-                        >
-                          <option value="pending">⏳ Pending</option>
-                          <option value="confirmed">✅ Confirmed</option>
-                          <option value="preparing">👨‍🍳 Preparing</option>
-                          <option value="ready">🥤 Ready</option>
-                          <option value="completed">📦 Completed</option>
-                          <option value="cancelled">❌ Cancelled</option>
-                        </select>
-                      </div>
-                      <div className="date">
-                        {formatDate(order.orderDate)}
-                      </div>
-                    </div>
+              ))}
+             </div>}
+        </>}
+
+        {/* ORDERS */}
+        {tab==='orders'&&<>
+          <h2 style={{marginBottom:'1rem'}}>Orders ({orders.length})</h2>
+          {orders.length===0
+            ?<div className="card empty" style={{textAlign:'center'}}>No orders yet</div>
+            :<div style={{overflowX:'auto'}}>
+              <table>
+                <thead><tr>
+                  <th>#</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th>
+                </tr></thead>
+                <tbody>
+                  {orders.map(o=>(
+                    <tr key={o._id}>
+                      <td>#{o.orderNumber||o._id.slice(-6)}</td>
+                      <td>{o.customer?.name||'N/A'}<br/><span style={{fontSize:'.85rem',color:'var(--muted)'}}>{o.customer?.email}</span></td>
+                      <td>{o.items?.length||0}</td>
+                      <td style={{fontWeight:600}}>₱{o.totalAmount||0}</td>
+                      <td><select value={o.status||'pending'} onChange={e=>chgStatus(o._id,e.target.value)}>{statusList.map(s=><option key={s} value={s}>{s}</option>)}</select></td>
+                      <td>{fmt(o.orderDate)}</td>
+                    </tr>
                   ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                </tbody>
+              </table>
+             </div>}
+        </>}
 
-        {/* USERS TAB */}
-        {activeTab === 'users' && (
-          <div className="users-tab">
-            <div className="tab-header">
-              <h2>User Management ({users.length} users)</h2>
-            </div>
-
-            {users.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">👥</div>
-                <h3>No Users Found</h3>
-                <p>Users will appear here when they register</p>
-              </div>
-            ) : (
-              <div className="users-table">
-                <div className="table-header">
-                  <div>Name</div>
-                  <div>Email</div>
-                  <div>Phone</div>
-                  <div>Role</div>
-                  <div>Joined</div>
-                  <div>Actions</div>
-                </div>
-                <div className="table-body">
-                  {users.map(user => (
-                    <div key={user._id} className="table-row">
-                      <div className="user-name">
-                        <strong>{user.name}</strong>
-                      </div>
-                      <div className="user-email">{user.email}</div>
-                      <div className="user-phone">{user.phone || 'N/A'}</div>
-                      <div className="user-role">
-                        <select 
-                          value={user.role}
-                          onChange={(e) => updateUserRole(user._id, e.target.value)}
-                          className="role-select"
-                        >
-                          <option value="customer">Customer</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </div>
-                      <div className="user-joined">
-                        {formatDate(user.createdAt)}
-                      </div>
-                      <div className="user-actions">
-                        <button 
-                          onClick={() => deleteUser(user._id)}
-                          className="btn-delete"
-                          disabled={user.role === 'admin'}
-                          title={user.role === 'admin' ? 'Cannot delete admin users' : 'Delete user'}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
+        {/* USERS */}
+        {tab==='users'&&<>
+          <h2 style={{marginBottom:'1rem'}}>Users ({users.length})</h2>
+          {users.length===0
+            ?<div className="card empty" style={{textAlign:'center'}}>No users yet</div>
+            :<div style={{overflowX:'auto'}}>
+              <table>
+                <thead><tr>
+                  <th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th></th>
+                </tr></thead>
+                <tbody>
+                  {users.map(u=>(
+                    <tr key={u._id}>
+                      <td style={{fontWeight:600}}>{u.name}</td>
+                      <td>{u.email}</td>
+                      <td><select value={u.role} onChange={e=>chgRole(u._id,e.target.value)}><option value="customer">Customer</option><option value="admin">Admin</option></select></td>
+                      <td>{fmt(u.createdAt)}</td>
+                      <td><button className="btn btnDanger" onClick={()=>delUser(u._id)} disabled={u.role==='admin'}>🗑️</button></td>
+                    </tr>
                   ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                </tbody>
+              </table>
+             </div>}
+        </>}
       </div>
-    </div>
+
+      {/* ------- MODAL ------- */}
+      {showForm&&
+        <div className="modal" onClick={closeForm}>
+          <div className="modalBox" onClick={e=>e.stopPropagation()}>
+            <div className="modalHead">
+              <h3>{editing?'Edit Product':'Add Product'}</h3>
+              <button className="close" onClick={closeForm}>✕</button>
+            </div>
+            <form onSubmit={saveProduct}>
+              <div className="formGroup"><label>Name *</label><input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="e.g. Classic Milk Tea"/></div>
+              <div className="formGroup"><label>Price (₱) *</label><input required type="number" min="0" step="0.01" value={form.price} onChange={e=>setForm({...form,price:e.target.value})}/></div>
+              <div className="formGroup"><label>Category</label><select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{['Milk Tea','Fruit Tea','Coffee','Specialty','Seasonal'].map(c=><option key={c}>{c}</option>)}</select></div>
+              <div className="formGroup"><label>Description</label><textarea value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Short description"/></div>
+              <div className="formGroup"><label>Image URL</label><input type="url" value={form.image} onChange={e=>setForm({...form,image:e.target.value})} placeholder="https://…"/></div>
+              <div className="formActions">
+                <button type="button" className="btn btnSec" onClick={closeForm}>Cancel</button>
+                <button type="submit" className="btn btnPrim">{editing?'Update':'Add'}</button>
+              </div>
+            </form>
+          </div>
+        </div>}
+    </>
   );
 }
-
-export default AdminDashboard;

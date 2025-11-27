@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
-  orderNumber: { type: String, unique: true },
+  orderNumber: {
+    type: String,
+    unique: true
+  },
   customer: {
     name: String,
     email: String,
@@ -9,32 +12,47 @@ const orderSchema = new mongoose.Schema({
     address: String
   },
   items: [{
-    product: String,
-    quantity: Number,
+    name: String,
     price: Number,
+    finalPrice: Number,
+    quantity: Number,
     customizations: {
       size: String,
       sugar: String,
       ice: String,
-      addons: [String]
+      addons: [{
+        name: String,
+        price: Number
+      }]
     }
   }],
-  totalAmount: Number,
-  orderType: { type: String, enum: ['pickup', 'delivery'], default: 'pickup' },
-  status: { 
-    type: String, 
+  totalAmount: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  status: {
+    type: String,
     enum: ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'],
     default: 'pending'
   },
-  paymentMethod: { type: String, enum: ['cod', 'gcash', 'maya', 'card'], default: 'cod' },
-  paymentStatus: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
-  orderDate: { type: Date, default: Date.now }
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'failed'],
+    default: 'pending'
+  },
+  orderDate: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true
 });
 
-orderSchema.pre('save', async function(next) {
+// Generate order number before saving
+orderSchema.pre('save', function(next) {
   if (!this.orderNumber) {
-    const count = await mongoose.model('Order').countDocuments();
-    this.orderNumber = `BT${Date.now()}${count + 1}`;
+    this.orderNumber = 'ORD' + Date.now().toString().slice(-8);
   }
   next();
 });

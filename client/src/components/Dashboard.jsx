@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import CustomizationModal from './CustomizationModal';
 import AuthModal from './AuthModal';
-import AdminDashboard from './AdminDashboard';
+import AdminDashboard from './Dashboard';
 import PaymentModal from './PaymentModal';
 import './Dashboard.css';
 

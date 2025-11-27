@@ -11,15 +11,136 @@ app.use(express.json());
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://brewtopia_admin:BrewtopiaMilkTea@brewtopia.mznffmc.mongodb.net/brewtopia?retryWrites=true&w=majority';
 
-// ✅ PRODUCTS ROUTES - FROM DATABASE
+// ✅ USER MANAGEMENT ROUTES
+app.get('/api/users', async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const users = await User.find().select('-password');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/admin/users/:id/role', async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role: req.body.role },
+      { new: true }
+    ).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete('/api/admin/users/:id', async (req, res) => {
+  try {
+    const User = require('./models/User');
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ✅ PRODUCTS ROUTES
 app.get('/api/products', async (req, res) => {
   try {
     const Product = require('./models/Product');
     const products = await Product.find({ isAvailable: true });
-    console.log('📦 Products requested:', products.length);
     res.json(products);
   } catch (error) {
-    console.error('Error fetching products:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/admin/products', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const products = await Product.find();
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/api/admin/products', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    
+    const productData = {
+      ...req.body,
+      customizations: req.body.customizations || {
+        sizes: [
+          { name: "Regular", price: 0 },
+          { name: "Large", price: 20 },
+          { name: "X-Large", price: 30 }
+        ],
+        sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
+        iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
+        addons: [
+          { name: "Pearls", price: 15 },
+          { name: "Pudding", price: 20 },
+          { name: "Whip Cream", price: 25 }
+        ]
+      }
+    };
+    
+    const product = new Product(productData);
+    await product.save();
+    res.status(201).json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/admin/products/:id', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete('/api/admin/products/:id', async (req, res) => {
+  try {
+    const Product = require('./models/Product');
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.json({ message: 'Product deleted successfully' });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
@@ -30,13 +151,11 @@ app.post('/api/auth/register', async (req, res) => {
     const User = require('./models/User');
     const { name, email, password, phone, address } = req.body;
     
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
     
-    // Create user
     const user = new User({ 
       name, 
       email, 
@@ -69,13 +188,11 @@ app.post('/api/auth/login', async (req, res) => {
     const User = require('./models/User');
     const { email, password } = req.body;
     
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
     
-    // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid email or password' });
@@ -109,6 +226,16 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
+app.get('/api/orders', async (req, res) => {
+  try {
+    const Order = require('./models/Order');
+    const orders = await Order.find().sort({ orderDate: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 app.get('/api/orders/my-orders/:email', async (req, res) => {
   try {
     const Order = require('./models/Order');
@@ -120,118 +247,7 @@ app.get('/api/orders/my-orders/:email', async (req, res) => {
   }
 });
 
-// ✅ ADMIN PRODUCT ROUTES
-app.get('/api/admin/products', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const products = await Product.find();
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.post('/api/admin/products', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    
-    // Add default customizations if not provided
-    const productData = {
-      ...req.body,
-      customizations: req.body.customizations || {
-        sizes: [
-          { name: "Regular", price: 0 },
-          { name: "Large", price: 20 },
-          { name: "X-Large", price: 30 }
-        ],
-        sugarLevels: ["0%", "25%", "50%", "75%", "100%"],
-        iceLevels: ["No Ice", "Less Ice", "Regular Ice"],
-        addons: [
-          { name: "Pearls", price: 15 },
-          { name: "Pudding", price: 20 },
-          { name: "Whip Cream", price: 25 }
-        ]
-      }
-    };
-    
-    const product = new Product(productData);
-    await product.save();
-    console.log('✅ New product created:', product.name);
-    res.status(201).json(product);
-  } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.put('/api/admin/products/:id', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const product = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    console.log('✅ Product updated:', product.name);
-    res.json(product);
-  } catch (error) {
-    console.error('Error updating product:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-app.delete('/api/admin/products/:id', async (req, res) => {
-  try {
-    const Product = require('./models/Product');
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    console.log('✅ Product deleted:', product.name);
-    res.json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// ✅ ADMIN DASHBOARD ROUTES
-app.get('/api/admin/dashboard', async (req, res) => {
-  try {
-    const Order = require('./models/Order');
-    const Product = require('./models/Product');
-    
-    const totalOrders = await Order.countDocuments();
-    const pendingOrders = await Order.countDocuments({ status: 'pending' });
-    const todayOrders = await Order.countDocuments({
-      orderDate: { 
-        $gte: new Date().setHours(0,0,0,0),
-        $lt: new Date().setHours(23,59,59,999)
-      }
-    });
-    
-    const totalRevenue = await Order.aggregate([
-      { $match: { paymentStatus: 'paid' } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-    ]);
-
-    const totalProducts = await Product.countDocuments();
-
-    res.json({
-      totalOrders,
-      pendingOrders,
-      todayOrders,
-      totalRevenue: totalRevenue[0]?.total || 0,
-      totalProducts
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
+// ✅ ADMIN ORDERS ROUTES
 app.get('/api/admin/orders', async (req, res) => {
   try {
     const Order = require('./models/Order');
@@ -268,7 +284,44 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
   }
 });
 
-// ✅ AUTO-CREATE ADMIN AND SAMPLE PRODUCTS
+// ✅ ADMIN DASHBOARD ROUTES
+app.get('/api/admin/dashboard', async (req, res) => {
+  try {
+    const Order = require('./models/Order');
+    const Product = require('./models/Product');
+    const User = require('./models/User');
+    
+    const totalOrders = await Order.countDocuments();
+    const pendingOrders = await Order.countDocuments({ status: 'pending' });
+    const todayOrders = await Order.countDocuments({
+      orderDate: { 
+        $gte: new Date().setHours(0,0,0,0),
+        $lt: new Date().setHours(23,59,59,999)
+      }
+    });
+    
+    const totalRevenue = await Order.aggregate([
+      { $match: { paymentStatus: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]);
+
+    const totalProducts = await Product.countDocuments();
+    const totalUsers = await User.countDocuments();
+
+    res.json({
+      totalOrders,
+      pendingOrders,
+      todayOrders,
+      totalRevenue: totalRevenue[0]?.total || 0,
+      totalProducts,
+      totalUsers
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ✅ AUTO-CREATE ADMIN AND SAMPLE DATA
 const initializeData = async () => {
   try {
     const User = require('./models/User');
@@ -315,13 +368,6 @@ const initializeData = async () => {
           price: 140,
           image: "https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&h=300&fit=crop", 
           description: "Creamy taro flavor with purple yam and chewy pearls",
-          category: "Milk Tea"
-        },
-        {
-          name: "Matcha Milk Tea",
-          price: 150,
-          image: "https://images.unsplash.com/photo-1525385133512-2f3bdd24ac30?w=400&h=300&fit=crop",
-          description: "Premium Japanese matcha with milk and sweetener", 
           category: "Milk Tea"
         }
       ];
@@ -384,6 +430,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       orders: '/api/orders',
       admin: '/api/admin',
+      users: '/api/users',
       health: '/health'
     }
   });
